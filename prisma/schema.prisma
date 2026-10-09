@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // 1. Profile: Thông tin cá nhân
@@ -23,6 +24,7 @@ model Profile {
   updatedAt   DateTime @updatedAt
 }
 
+// 2. Project: Quản lý dự án
 model Project {
   id          Int      @id @default(autoincrement())
   title       String   // Tên dự án
@@ -36,10 +38,10 @@ model Project {
 
 // 3. Skills: Kỹ năng chuyên môn
 model Skill {
-  id          Int    @id @default(autoincrement())
-  name        String
-  percentage  Int
-  category    String
+  id         Int    @id @default(autoincrement())
+  name       String
+  percentage Int
+  category   String
 }
 
 // 4. Tools: Công cụ / Phần mềm
@@ -60,6 +62,7 @@ model Experience {
   description String   @db.Text
 }
 
+// 6. Setting: Cài đặt chung hệ thống
 model Setting {
   id        Int      @id @default(autoincrement())
   key       String   @unique
@@ -67,7 +70,7 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
-// 8. NavbarItem: Quản lý Thanh Navbar & Menu (Hỗ trợ cấu trúc Cha - Con đệ quy)
+// 7. NavbarItem: Quản lý Thanh Navbar & Menu
 model NavbarItem {
   id        Int          @id @default(autoincrement())
   title     String
@@ -77,6 +80,7 @@ model NavbarItem {
   children  NavbarItem[] @relation("NavHierarchy")
 }
 
+// 8. HeroSection: Phần giới thiệu đầu trang
 model HeroSection {
   id          Int      @id @default(autoincrement())
   greeting    String   @default("Hello,")
@@ -88,10 +92,11 @@ model HeroSection {
   twitter     String?
   darkBgUrl   String?  @db.Text  // Đã đổi sang @db.Text cho PostgreSQL
   lightBgUrl  String?  @db.Text  // Đã đổi sang @db.Text cho PostgreSQL
-  socials     String?  @db.Text  // Lưu danh sách mạng xã hội động (JSON)
+  socials     String?  @db.Text  
   updatedAt   DateTime @updatedAt
 }
 
+// 9. AboutSection: Phần thông tin chi tiết bản thân
 model AboutSection {
   id          Int      @id @default(autoincrement())
   image       String   @db.Text   // Đã đổi sang @db.Text cho PostgreSQL
@@ -102,32 +107,36 @@ model AboutSection {
   updatedAt   DateTime @updatedAt
 }
 
+// 10. Service: Dịch vụ cung cấp
 model Service {
   id          Int      @id @default(autoincrement())
   title       String
-  iconName    String   // Lưu tên icon (Ví dụ: "Monitor", "Code", "PenTool"...)
+  iconName    String   
   shortDesc   String   @db.Text
   fullDetail  String   @db.Text
   updatedAt   DateTime @updatedAt
 }
 
+// 11. Resume: Sơ yếu lý lịch (Học tập & Làm việc)
 model Resume {
   id          Int      @id @default(autoincrement())
-  type        String   // Phân loại: "education" hoặc "experience"
-  time        String   // Thời gian (Ví dụ: March 2013 - Present)
-  title       String   // Tên bằng cấp (education) hoặc Tên công ty (experience)
-  desc        String   // Mô tả chi tiết
-  institution String?  // Dành riêng cho Education (Tên trường)
-  role        String?  // Dành riêng cho Experience (Chức vụ)
+  type        String   
+  time        String   
+  title       String   
+  desc        String   
+  institution String?  
+  role        String?  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
+// 12. Category: Danh mục bài viết/dự án
 model Category {
   id    Int    @id @default(autoincrement())
   name  String @unique
 }
 
+// 13. Testimonial: Đánh giá từ khách hàng/đồng nghiệp
 model Testimonial {
   id        Int      @id @default(autoincrement())
   name      String
@@ -140,37 +149,41 @@ model Testimonial {
   @@map("testimonials")
 }
 
+// 14. Stat: Thống kê nổi bật
 model Stat {
   id        Int      @id @default(autoincrement())
   label     String
   value     String
-  iconName  String   // Lưu tên icon (Ví dụ: "Trophy", "Heart", "Briefcase", "Award")
+  iconName  String   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("stats")
 }
 
+// 15. BlogPost: Bài viết blog
 model BlogPost {
   id          Int      @id @default(autoincrement())
   title       String   
   excerpt     String   
-  content     String?  // Nội dung chi tiết bài viết
+  content     String?  
   image       String   @db.Text // Đã đổi sang @db.Text cho PostgreSQL
   published   Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
+// 16. Message: Tin nhắn liên hệ từ khách ghé thăm
 model Message {
   id        Int      @id @default(autoincrement())
   name      String
   email     String
-  budget    String?  // Thêm trường budget để lưu ngân sách dự án
+  budget    String?  
   message   String
   createdAt DateTime @default(now())
 }
 
+// 17. ContactInfo: Thông tin liên hệ công khai
 model ContactInfo {
   id        Int      @id @default(autoincrement())
   phone     String   @db.Text
