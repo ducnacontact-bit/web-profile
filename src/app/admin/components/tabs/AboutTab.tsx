@@ -27,6 +27,9 @@ export default function AboutTab() {
   });
 
   const [skills, setSkills] = useState<SkillData[]>([]);
+
+  // State form kỹ năng (hỗ trợ cả thêm mới và chỉnh sửa)
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [newSkill, setNewSkill] = useState({
     name: "",
     percentage: "",
@@ -99,30 +102,67 @@ export default function AboutTab() {
     }
   };
 
-  // 3. Xử lý thêm Skill mới
-  const handleAddSkill = async (e: React.FormEvent) => {
+  // 3. Xử lý thêm mới hoặc cập nhật Skill
+  const handleSaveSkill = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSkill.name || !newSkill.percentage) return;
 
     try {
-      const res = await fetch("/api/skills", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSkill),
-      });
+      if (editingId !== null) {
+        // --- CHẾ ĐỘ SỬA (PUT / PATCH) ---
+        const res = await fetch(`/api/skills/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSkill),
+        });
 
-      if (res.ok) {
-        const createdSkill = await res.json();
-        setSkills([...skills, createdSkill]);
-        setNewSkill({ name: "", percentage: "", category: "frontend" });
-        alert("Thêm kỹ năng thành công!");
+        if (res.ok) {
+          const updatedSkill = await res.json();
+          setSkills(skills.map((s) => (s.id === editingId ? updatedSkill : s)));
+          setEditingId(null);
+          setNewSkill({ name: "", percentage: "", category: "frontend" });
+          alert("Cập nhật kỹ năng thành công!");
+        } else {
+          // Fallback nếu API của bạn dùng POST cho cả cập nhật hoặc dùng cấu trúc khác
+          alert("Không thể cập nhật kỹ năng. Hãy kiểm tra lại API.");
+        }
       } else {
-        alert("Không thể thêm kỹ năng.");
+        // --- CHẾ ĐỘ THÊM MỚI (POST) ---
+        const res = await fetch("/api/skills", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSkill),
+        });
+
+        if (res.ok) {
+          const createdSkill = await res.json();
+          setSkills([...skills, createdSkill]);
+          setNewSkill({ name: "", percentage: "", category: "frontend" });
+          alert("Thêm kỹ năng thành công!");
+        } else {
+          alert("Không thể thêm kỹ năng.");
+        }
       }
     } catch (error) {
-      console.error("Lỗi khi thêm kỹ năng:", error);
+      console.error("Lỗi khi lưu kỹ năng:", error);
       alert("Lỗi kết nối máy chủ.");
     }
+  };
+
+  // Đưa dữ liệu kỹ năng lên form để sửa
+  const handleEditClick = (skill: SkillData) => {
+    setEditingId(skill.id);
+    setNewSkill({
+      name: skill.name,
+      percentage: skill.percentage.toString(),
+      category: skill.category || "frontend",
+    });
+  };
+
+  // Hủy sửa
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNewSkill({ name: "", percentage: "", category: "frontend" });
   };
 
   // 4. Xử lý xóa Skill
@@ -297,13 +337,20 @@ export default function AboutTab() {
 
         {/* Phần Quản lý Skills */}
         <div className="pt-6 border-t border-neutral-800 space-y-6">
-          <h2 className="text-sm font-semibold text-neutral-200 tracking-wider uppercase">
-            Quản lý kỹ năng (My Skills)
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-200 tracking-wider uppercase">
+              Quản lý kỹ năng (My Skills)
+            </h2>
+            {editingId && (
+              <span className="text-xs text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-md border border-amber-400/20">
+                Đang chỉnh sửa kỹ năng #{editingId}
+              </span>
+            )}
+          </div>
 
-          {/* Form thêm kỹ năng */}
+          {/* Form thêm mới / chỉnh sửa kỹ năng */}
           <form
-            onSubmit={handleAddSkill}
+            onSubmit={handleSaveSkill}
             className="flex flex-wrap gap-4 items-end bg-[#18181b] p-4 rounded-xl border border-neutral-800"
           >
             <div className="flex-1 min-w-[200px]">
@@ -336,7 +383,6 @@ export default function AboutTab() {
               />
             </div>
 
-            {/* Ô nhập Category bổ sung bắt buộc khớp với database */}
             <div className="w-40">
               <label className="block text-xs font-medium text-neutral-400 mb-2">
                 Phân loại (Category)
@@ -352,13 +398,27 @@ export default function AboutTab() {
               />
             </div>
 
-            <div>
+            <div className="flex items-center gap-2">
               <button
                 type="submit"
-                className="bg-neutral-200 text-black font-semibold px-4 py-2 rounded-lg text-xs hover:bg-white transition-all h-[34px]"
+                className={`font-semibold px-4 py-2 rounded-lg text-xs transition-all h-[34px] ${
+                  editingId
+                    ? "bg-amber-400 text-black hover:bg-amber-300"
+                    : "bg-neutral-200 text-black hover:bg-white"
+                }`}
               >
-                + Thêm kỹ năng
+                {editingId ? "Cập nhật kỹ năng" : "+ Thêm kỹ năng"}
               </button>
+
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="bg-neutral-800 text-neutral-300 font-semibold px-3 py-2 rounded-lg text-xs hover:bg-neutral-700 transition-all h-[34px]"
+                >
+                  Hủy
+                </button>
+              )}
             </div>
           </form>
 
@@ -375,13 +435,23 @@ export default function AboutTab() {
                     ({skill.percentage}%) - [{skill.category}]
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteSkill(skill.id)}
-                  className="text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1"
-                >
-                  Xóa
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick(skill)}
+                    className="text-sky-400 hover:text-sky-300 font-medium transition-colors px-2 py-1 bg-sky-500/10 rounded"
+                  >
+                    Sửa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteSkill(skill.id)}
+                    className="text-red-400 hover:text-red-300 font-medium transition-colors px-2 py-1 bg-red-500/10 rounded"
+                  >
+                    Xóa
+                  </button>
+                </div>
               </div>
             ))}
             {skills.length === 0 && (
