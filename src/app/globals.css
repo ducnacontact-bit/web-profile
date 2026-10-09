@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Cấu hình hỗ trợ Dark Mode cho Tailwind v4 thủ công qua class */
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  background: #ffffff;
+  color: #111111;
+}
+
+.dark {
+  background: #0b0b0b;
+  color: #ffffff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  /* Sử dụng màu nền thích ứng theo chế độ sáng/tối */
+  background-color: var(--bg-color, #0b0b0b);
+  color: var(--text-color, #ffffff);
+}
+
+/* Tự động đổi màu nền và chữ dựa vào class .dark trên thẻ html */
+html:not(.dark) body {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+}
+
+html.dark body {
+  background-color: #0b0b0b !important;
+  color: #ffffff !important;
+}
+
+::selection {
+  background: #ffb400;
+  color: #000000;
+}

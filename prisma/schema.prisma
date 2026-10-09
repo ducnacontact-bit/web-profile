@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Profile: Thông tin cá nhân
+model Profile {
+  id          Int      @id @default(autoincrement())
+  name        String
+  title       String
+  bio         String   @db.Text
+  avatarUrl   String?
+  resumeUrl   String?
+  email       String
+  github      String?
+  linkedin    String?
+  instagram   String?
+  twitter     String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String   // Tên dự án
+  category    String   // Danh mục
+  image       String   @db.LongText // <--- Thêm @db.LongText vào đây để chứa ảnh Base64 dài thoải mái
+  span        String   @default("col-span-1 row-span-1") // Kích thước lưới CSS (Masonry)
+  desc        String   // Mô tả chi tiết dự án
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+// 3. Skills: Kỹ năng chuyên môn
+model Skill {
+  id          Int    @id @default(autoincrement())
+  name        String
+  percentage Int
+  category   String
+}
+
+// 4. Tools: Công cụ / Phần mềm
+model Tool {
+  id       Int    @id @default(autoincrement())
+  name     String
+  icon     String?
+  category String?
+}
+
+// 5. Experience: Kinh nghiệm & Học vấn
+model Experience {
+  id          Int      @id @default(autoincrement())
+  type        String
+  title       String
+  company     String
+  period      String
+  description String   @db.Text
+}
+
+
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   @db.LongText // Dùng LongText để chứa thoải mái ảnh Base64
+  updatedAt DateTime @updatedAt
+}
+
+// 8. NavbarItem: Quản lý Thanh Navbar & Menu (Hỗ trợ cấu trúc Cha - Con đệ quy)
+model NavbarItem {
+  id        Int          @id @default(autoincrement())
+  title     String
+  url       String
+  parentId  Int?
+  parent    NavbarItem?  @relation("NavHierarchy", fields: [parentId], references: [id], onDelete: Cascade) // Thêm onDelete: Cascade ở đây
+  children  NavbarItem[] @relation("NavHierarchy")
+}
+model HeroSection {
+  id          Int      @id @default(autoincrement())
+  greeting    String   @default("Hello,")
+  roles       String   
+  description String   @db.Text
+  instagram   String?
+  website     String?
+  tumblr      String?
+  twitter     String?
+  darkBgUrl   String?  @db.LongText  
+  lightBgUrl  String?  @db.LongText  
+  socials     String?  @db.Text  // <--- Thêm trường này để lưu danh sách mạng xã hội động (JSON)
+  updatedAt   DateTime @updatedAt
+}
+model AboutSection {
+  id          Int      @id @default(autoincrement())
+  image       String   @db.LongText   // <-- Đổi thành @db.LongText để chứa được chuỗi ảnh dài
+  paragraph1  String   @db.Text
+  paragraph2  String   @db.Text
+  hireMeUrl   String   @default("#contact")
+  cvUrl       String   @db.LongText   // <-- Đổi thành @db.LongText nếu bạn cũng tải file CV dạng base64
+  updatedAt   DateTime @updatedAt
+}
+model Service {
+  id          Int      @id @default(autoincrement())
+  title       String
+  iconName    String   // Lưu tên icon (Ví dụ: "Monitor", "Code", "PenTool"...)
+  shortDesc   String   @db.Text
+  fullDetail  String   @db.Text
+  updatedAt   DateTime @updatedAt
+}
+model Resume {
+  id          Int      @id @default(autoincrement())
+  type        String   // Phân loại: "education" hoặc "experience"
+  time        String   // Thời gian (Ví dụ: March 2013 - Present)
+  title       String   // Tên bằng cấp (education) hoặc Tên công ty (experience)
+  desc        String   // Mô tả chi tiết
+  institution String?  // Dành riêng cho Education (Tên trường)
+  role        String?  // Dành riêng cho Experience (Chức vụ)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  // Các quan hệ khác nếu có...
+}
+model Testimonial {
+  id        Int      @id @default(autoincrement())
+  name      String
+  role      String
+  image     String   @db.LongText // <--- Thêm @db.LongText vào đây để chứa ảnh Base64
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+model Stat {
+  id        Int      @id @default(autoincrement())
+  label     String
+  value     String
+  iconName  String   // Lưu tên icon (Ví dụ: "Trophy", "Heart", "Briefcase", "Award")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("stats")
+}
+model BlogPost {
+  id          Int      @id @default(autoincrement())
+  title       String   
+  excerpt     String   
+  content     String?  // Nội dung chi tiết bài viết
+  image       String   @db.LongText // <--- Thêm @db.LongText vào đây để chứa chuỗi ảnh Base64 dài
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Message {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  budget    String?  // Thêm trường budget để lưu ngân sách dự án
+  message   String
+  createdAt DateTime @default(now())
+}
+model ContactInfo {
+  id        Int      @id @default(autoincrement())
+  phone     String   @db.Text
+  address   String   @db.Text
+  email     String   @db.Text
+  updatedAt DateTime @updatedAt
+}

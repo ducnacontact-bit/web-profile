@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:latest
+    container_name: my-mysql
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: "my_profile"
+    ports:
+      - "3306:3306"
