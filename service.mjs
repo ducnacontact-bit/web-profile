@@ -1,9 +1,9 @@
-// @ts-check
+// src/service.ts
 import nextjs from "@prisma/composer/nextjs";
-import { compute } from "@prisma/composer-prisma-cloud";
+import { compute, rawPostgres } from "@prisma/composer-prisma-cloud";
 
 export default compute({
   name: "my-profile",
-  deps: {},
-  build: nextjs({ module: import.meta.url, appDir: "." }),
+  deps: { db: rawPostgres() },
+  build: nextjs({ module: import.meta.url, appDir: ".." }),
 });
