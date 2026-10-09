@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -27,18 +27,19 @@ model Project {
   id          Int      @id @default(autoincrement())
   title       String   // Tên dự án
   category    String   // Danh mục
-  image       String   @db.LongText // <--- Thêm @db.LongText vào đây để chứa ảnh Base64 dài thoải mái
+  image       String   @db.Text // Đã đổi sang @db.Text cho PostgreSQL
   span        String   @default("col-span-1 row-span-1") // Kích thước lưới CSS (Masonry)
   desc        String   // Mô tả chi tiết dự án
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
 // 3. Skills: Kỹ năng chuyên môn
 model Skill {
   id          Int    @id @default(autoincrement())
   name        String
-  percentage Int
-  category   String
+  percentage  Int
+  category    String
 }
 
 // 4. Tools: Công cụ / Phần mềm
@@ -59,12 +60,10 @@ model Experience {
   description String   @db.Text
 }
 
-
-
 model Setting {
   id        Int      @id @default(autoincrement())
   key       String   @unique
-  value     String   @db.LongText // Dùng LongText để chứa thoải mái ảnh Base64
+  value     String   @db.Text // Đã đổi sang @db.Text cho PostgreSQL
   updatedAt DateTime @updatedAt
 }
 
@@ -74,9 +73,10 @@ model NavbarItem {
   title     String
   url       String
   parentId  Int?
-  parent    NavbarItem?  @relation("NavHierarchy", fields: [parentId], references: [id], onDelete: Cascade) // Thêm onDelete: Cascade ở đây
+  parent    NavbarItem?  @relation("NavHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children  NavbarItem[] @relation("NavHierarchy")
 }
+
 model HeroSection {
   id          Int      @id @default(autoincrement())
   greeting    String   @default("Hello,")
@@ -86,20 +86,22 @@ model HeroSection {
   website     String?
   tumblr      String?
   twitter     String?
-  darkBgUrl   String?  @db.LongText  
-  lightBgUrl  String?  @db.LongText  
-  socials     String?  @db.Text  // <--- Thêm trường này để lưu danh sách mạng xã hội động (JSON)
+  darkBgUrl   String?  @db.Text  // Đã đổi sang @db.Text cho PostgreSQL
+  lightBgUrl  String?  @db.Text  // Đã đổi sang @db.Text cho PostgreSQL
+  socials     String?  @db.Text  // Lưu danh sách mạng xã hội động (JSON)
   updatedAt   DateTime @updatedAt
 }
+
 model AboutSection {
   id          Int      @id @default(autoincrement())
-  image       String   @db.LongText   // <-- Đổi thành @db.LongText để chứa được chuỗi ảnh dài
+  image       String   @db.Text   // Đã đổi sang @db.Text cho PostgreSQL
   paragraph1  String   @db.Text
   paragraph2  String   @db.Text
   hireMeUrl   String   @default("#contact")
-  cvUrl       String   @db.LongText   // <-- Đổi thành @db.LongText nếu bạn cũng tải file CV dạng base64
+  cvUrl       String   @db.Text   // Đã đổi sang @db.Text cho PostgreSQL
   updatedAt   DateTime @updatedAt
 }
+
 model Service {
   id          Int      @id @default(autoincrement())
   title       String
@@ -108,6 +110,7 @@ model Service {
   fullDetail  String   @db.Text
   updatedAt   DateTime @updatedAt
 }
+
 model Resume {
   id          Int      @id @default(autoincrement())
   type        String   // Phân loại: "education" hoặc "experience"
@@ -119,16 +122,17 @@ model Resume {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
 model Category {
   id    Int    @id @default(autoincrement())
   name  String @unique
-  // Các quan hệ khác nếu có...
 }
+
 model Testimonial {
   id        Int      @id @default(autoincrement())
   name      String
   role      String
-  image     String   @db.LongText // <--- Thêm @db.LongText vào đây để chứa ảnh Base64
+  image     String   @db.Text // Đã đổi sang @db.Text cho PostgreSQL
   content   String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -146,16 +150,18 @@ model Stat {
 
   @@map("stats")
 }
+
 model BlogPost {
   id          Int      @id @default(autoincrement())
   title       String   
   excerpt     String   
   content     String?  // Nội dung chi tiết bài viết
-  image       String   @db.LongText // <--- Thêm @db.LongText vào đây để chứa chuỗi ảnh Base64 dài
+  image       String   @db.Text // Đã đổi sang @db.Text cho PostgreSQL
   published   Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
 model Message {
   id        Int      @id @default(autoincrement())
   name      String
@@ -164,6 +170,7 @@ model Message {
   message   String
   createdAt DateTime @default(now())
 }
+
 model ContactInfo {
   id        Int      @id @default(autoincrement())
   phone     String   @db.Text
