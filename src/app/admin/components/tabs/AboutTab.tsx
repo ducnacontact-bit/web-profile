@@ -312,7 +312,7 @@ export default function AboutTab() {
               </label>
               <input
                 type="text"
-                placeholder="VD: UI/UX DESIGN"
+                placeholder="VD: ReactJS"
                 value={newSkill.name}
                 onChange={(e) =>
                   setNewSkill({ ...newSkill, name: e.target.value })
@@ -331,6 +331,22 @@ export default function AboutTab() {
                 value={newSkill.percentage}
                 onChange={(e) =>
                   setNewSkill({ ...newSkill, percentage: e.target.value })
+                }
+                className="w-full bg-[#121212] border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
+              />
+            </div>
+
+            {/* Ô nhập Category bổ sung bắt buộc khớp với database */}
+            <div className="w-40">
+              <label className="block text-xs font-medium text-neutral-400 mb-2">
+                Phân loại (Category)
+              </label>
+              <input
+                type="text"
+                placeholder="VD: frontend"
+                value={newSkill.category}
+                onChange={(e) =>
+                  setNewSkill({ ...newSkill, category: e.target.value })
                 }
                 className="w-full bg-[#121212] border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
               />
@@ -356,7 +372,7 @@ export default function AboutTab() {
                 <div className="flex items-center space-x-3">
                   <span className="font-semibold text-white">{skill.name}</span>
                   <span className="text-neutral-400 font-mono">
-                    ({skill.percentage}%)
+                    ({skill.percentage}%) - [{skill.category}]
                   </span>
                 </div>
                 <button
