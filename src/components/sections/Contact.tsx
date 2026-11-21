@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Headphones, MapPin, Mail, Send, Edit3 } from "lucide-react";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 interface ContactConfig {
   phone: string;
@@ -9,12 +10,92 @@ interface ContactConfig {
   email: string;
 }
 
+const uiText = {
+  VI: {
+    heading: "Bạn Muốn Bắt Đầu Làm Việc Cùng Tôi?",
+    subheading: "Hãy kể cho tôi nghe về câu chuyện dự án và yêu cầu của bạn",
+    startProject: "BẮT ĐẦU DỰ ÁN",
+    defaultPhone: "+0044 545 989 626\n+8801 909 130 830",
+    defaultAddress: "28 Green Tower, Street Name,\nNew York City, USA",
+    defaultEmail: "www.marveltheme.com\nwww.yourmail@gmail.com",
+    namePlaceholder: "Tên của bạn",
+    emailPlaceholder: "Email của bạn",
+    budgetPlaceholder: "Ngân sách dự kiến",
+    messagePlaceholder: "Mô tả dự án",
+    sending: "Đang gửi...",
+    sendMessage: "GỬI TIN NHẮN",
+    successMsg: "Cảm ơn bạn đã gửi tin nhắn! Chúng tôi sẽ phản hồi sớm nhất.",
+    failMsg: "Gửi tin nhắn thất bại. Vui lòng thử lại!",
+    networkErrorMsg: "Lỗi kết nối máy chủ.",
+    fetchError: "Lỗi tải thông tin contact:",
+    submitError: "Lỗi khi gửi message:",
+  },
+  EN: {
+    heading: "Wanna Start Work with me?",
+    subheading: "Tell me about your project story and project brief",
+    startProject: "START PROJECT",
+    defaultPhone: "+0044 545 989 626\n+8801 909 130 830",
+    defaultAddress: "28 Green Tower, Street Name,\nNew York City, USA",
+    defaultEmail: "www.marveltheme.com\nwww.yourmail@gmail.com",
+    namePlaceholder: "Your Name",
+    emailPlaceholder: "Your Email",
+    budgetPlaceholder: "Your Budget",
+    messagePlaceholder: "Project Description",
+    sending: "Sending...",
+    sendMessage: "SEND MESSAGE",
+    successMsg: "Thank you for your message! We will get back to you soon.",
+    failMsg: "Failed to send message. Please try again!",
+    networkErrorMsg: "Server connection error.",
+    fetchError: "Failed to load contact info:",
+    submitError: "Error submitting message:",
+  },
+};
+
+const contactTranslationCache = new Map<string, string>();
+
+async function translateContactText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (contactTranslationCache.has(cacheKey)) {
+    return contactTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        contactTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có endpoint dịch
+  }
+
+  return text;
+}
+
 export default function Contact() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
   const [contactInfo, setContactInfo] = useState<ContactConfig>({
     phone: "",
     address: "",
     email: "",
   });
+
+  const [displayAddress, setDisplayAddress] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -25,27 +106,40 @@ export default function Contact() {
 
   const [loading, setLoading] = useState(false);
 
-  // Lấy thông tin cấu hình liên hệ từ API
   useEffect(() => {
-    fetch("/api/contact")
+    fetch("/api/contact", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        // Hỗ trợ cấu trúc trả về dạng { data: ... } hoặc trực tiếp object
-        const info = data.data || data;
+        const info = data?.data || data;
         if (info) {
           setContactInfo({
-            phone: info.phone || "+0044 545 989 626\n+8801 909 130 830",
-            address:
-              info.address ||
-              "28 Green Tower, Street Name,\nNew York City, USA",
-            email: info.email || "www.marveltheme.com\nwww.yourmail@gmail.com",
+            phone: info.phone || t.defaultPhone,
+            address: info.address || t.defaultAddress,
+            email: info.email || t.defaultEmail,
           });
         }
       })
-      .catch((err) => console.error("Lỗi tải thông tin contact:", err));
-  }, []);
+      .catch((err) => console.error(t.fetchError, err));
+  }, [t.fetchError, t.defaultPhone, t.defaultAddress, t.defaultEmail]);
 
-  // Xử lý gửi tin nhắn liên hệ (lưu vào bảng Message)
+  useEffect(() => {
+    let active = true;
+
+    async function syncAddressLanguage() {
+      const sourceAddress = contactInfo.address || t.defaultAddress;
+      const nextAddress = await translateContactText(sourceAddress, lang);
+      if (active) {
+        setDisplayAddress(nextAddress);
+      }
+    }
+
+    syncAddressLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [contactInfo.address, t.defaultAddress, lang]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -58,14 +152,14 @@ export default function Contact() {
       });
 
       if (res.ok) {
-        alert("Cảm ơn bạn đã gửi tin nhắn! Chúng tôi sẽ phản hồi sớm nhất.");
+        alert(t.successMsg);
         setFormData({ name: "", email: "", budget: "", message: "" });
       } else {
-        alert("Gửi tin nhắn thất bại. Vui lòng thử lại!");
+        alert(t.failMsg);
       }
     } catch (error) {
-      console.error("Lỗi khi gửi message:", error);
-      alert("Lỗi kết nối máy chủ.");
+      console.error(t.submitError, error);
+      alert(t.networkErrorMsg);
     } finally {
       setLoading(false);
     }
@@ -77,70 +171,62 @@ export default function Contact() {
       className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white text-neutral-900 dark:bg-[#111] dark:text-white px-6 py-24 lg:px-24 transition-colors duration-300"
     >
       <div className="mx-auto w-full max-w-5xl text-center">
-        {/* Phần Tiêu đề đầu section */}
         <div className="mb-12">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white mb-2">
-            Wanna Start Work with me?
+            {t.heading}
           </h2>
           <p className="text-xs sm:text-sm text-neutral-600 dark:text-gray-400">
-            Tell me about your project story and project brief
+            {t.subheading}
           </p>
           <div className="mt-6 inline-block">
             <a
               href="#start-project"
               className="inline-block bg-neutral-900 text-white dark:bg-white dark:text-black font-semibold text-xs tracking-widest uppercase px-6 py-3 hover:bg-neutral-800 dark:hover:bg-gray-200 transition-colors shadow-md rounded-xl"
             >
-              START PROJECT
+              {t.startProject}
             </a>
           </div>
         </div>
 
-        {/* Khung chứa thông tin liên hệ và form */}
         <div className="bg-neutral-200/60 dark:bg-[#151515] border border-neutral-300 dark:border-white/5 p-8 sm:p-12 shadow-xl text-left transition-colors duration-300 rounded-2xl">
-          {/* Hàng 3 icon thông tin liên hệ (Phone, Address, Email) lấy từ DB */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12 mb-12 border-b border-neutral-300 dark:border-white/10 text-center">
-            {/* Phone */}
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-full border border-neutral-400 dark:border-white/20 flex items-center justify-center mb-4 text-neutral-900 dark:text-white bg-neutral-100/50 dark:bg-transparent shadow-sm">
                 <Headphones className="w-5 h-5" />
               </div>
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-gray-300 font-medium leading-relaxed whitespace-pre-line">
-                {contactInfo.phone}
+                {contactInfo.phone || t.defaultPhone}
               </p>
             </div>
 
-            {/* Address */}
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-full border border-neutral-400 dark:border-white/20 flex items-center justify-center mb-4 text-neutral-900 dark:text-white bg-neutral-100/50 dark:bg-transparent shadow-sm">
                 <MapPin className="w-5 h-5" />
               </div>
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-gray-300 font-medium leading-relaxed whitespace-pre-line">
-                {contactInfo.address}
+                {displayAddress || contactInfo.address || t.defaultAddress}
               </p>
             </div>
 
-            {/* Email */}
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-full border border-neutral-400 dark:border-white/20 flex items-center justify-center mb-4 text-neutral-900 dark:text-white bg-neutral-100/50 dark:bg-transparent shadow-sm">
                 <Mail className="w-5 h-5" />
               </div>
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-gray-300 font-medium leading-relaxed whitespace-pre-line">
-                {contactInfo.email}
+                {contactInfo.email || t.defaultEmail}
               </p>
             </div>
           </div>
 
-          {/* Form nhập liệu */}
           <form
             onSubmit={handleSubmit}
             className="grid grid-cols-1 lg:grid-cols-12 gap-6"
           >
-            {/* Cột trái: 3 ô input nhỏ */}
             <div className="lg:col-span-5 flex flex-col gap-4">
               <div>
                 <input
                   type="text"
-                  placeholder="Your Name"
+                  placeholder={t.namePlaceholder}
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
@@ -152,7 +238,7 @@ export default function Contact() {
               <div>
                 <input
                   type="email"
-                  placeholder="Your Email"
+                  placeholder={t.emailPlaceholder}
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -164,7 +250,7 @@ export default function Contact() {
               <div>
                 <input
                   type="text"
-                  placeholder="Your Budget"
+                  placeholder={t.budgetPlaceholder}
                   value={formData.budget}
                   onChange={(e) =>
                     setFormData({ ...formData, budget: e.target.value })
@@ -174,11 +260,10 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Cột phải: Ô textarea lớn và nút gửi */}
             <div className="lg:col-span-7 flex flex-col justify-between gap-4">
               <div className="relative flex-grow">
                 <textarea
-                  placeholder="Project Description"
+                  placeholder={t.messagePlaceholder}
                   rows={6}
                   value={formData.message}
                   onChange={(e) =>
@@ -190,14 +275,13 @@ export default function Contact() {
                 <Edit3 className="absolute bottom-3 right-3 w-4 h-4 text-neutral-400 dark:text-gray-500 pointer-events-none" />
               </div>
 
-              {/* Nút Send Message */}
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={loading}
                   className="bg-neutral-900 text-white dark:bg-white dark:text-black font-semibold text-xs tracking-widest uppercase px-8 py-3 hover:bg-neutral-800 dark:hover:bg-gray-200 transition-colors shadow-md cursor-pointer flex items-center gap-2 rounded-xl disabled:opacity-50"
                 >
-                  {loading ? "Đang gửi..." : "SEND MESSAGE"}{" "}
+                  {loading ? t.sending : t.sendMessage}{" "}
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </div>

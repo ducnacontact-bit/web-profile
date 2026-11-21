@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink } from "lucide-react";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 interface ProjectItem {
   id: number;
@@ -13,38 +14,154 @@ interface ProjectItem {
   desc: string;
 }
 
+const CATEGORY_KEYS = [
+  "ALL WORK",
+  "WEB DESIGN",
+  "GRAPHIC",
+  "PRINT",
+  "ILLUSTRATION",
+] as const;
+
+const uiText = {
+  VI: {
+    sectionTitle: "Dự Án Mới Nhất",
+    emptyProjects: "Đang cập nhật danh sách dự án...",
+    closeButton: "ĐÓNG",
+    projectDetailAlert: "Đường dẫn chi tiết dự án!",
+    fetchError: "Lỗi tải dự án:",
+    categories: {
+      "ALL WORK": "TẤT CẢ",
+      "WEB DESIGN": "THIẾT KẾ WEB",
+      GRAPHIC: "ĐỒ HỌA",
+      PRINT: "IN ẤN",
+      ILLUSTRATION: "MINH HỌA",
+    } as Record<string, string>,
+  },
+  EN: {
+    sectionTitle: "Latest Projects",
+    emptyProjects: "Updating projects list...",
+    closeButton: "CLOSE",
+    projectDetailAlert: "Project detail link!",
+    fetchError: "Failed to load projects:",
+    categories: {
+      "ALL WORK": "ALL WORK",
+      "WEB DESIGN": "WEB DESIGN",
+      GRAPHIC: "GRAPHIC",
+      PRINT: "PRINT",
+      ILLUSTRATION: "ILLUSTRATION",
+    } as Record<string, string>,
+  },
+};
+
+const projectTranslationCache = new Map<string, string>();
+
+async function translateProjectText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (projectTranslationCache.has(cacheKey)) {
+    return projectTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        projectTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có endpoint dịch
+  }
+
+  return text;
+}
+
 export default function LatestProjects() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
   const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [activeFilter, setActiveFilter] = useState("ALL WORK");
-  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(
+  const [translatedProjects, setTranslatedProjects] = useState<ProjectItem[]>(
+    [],
+  );
+  const [activeFilter, setActiveFilter] = useState<string>("ALL WORK");
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     null,
   );
 
-  // Lấy dữ liệu dự án từ API khi tải trang
   useEffect(() => {
-    fetch("/api/projects")
+    fetch("/api/projects", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setProjects(data);
         }
       })
-      .catch((err) => console.error("Lỗi tải dự án:", err));
-  }, []);
+      .catch((err) => console.error(t.fetchError, err));
+  }, [t.fetchError]);
 
-  // Lọc dự án theo danh mục
-  const filteredProjects =
-    activeFilter === "ALL WORK"
+  useEffect(() => {
+    let active = true;
+
+    async function syncProjectsLanguage() {
+      if (projects.length === 0) {
+        if (active) setTranslatedProjects([]);
+        return;
+      }
+
+      const nextProjects = await Promise.all(
+        projects.map(async (project) => {
+          const translatedCategory =
+            t.categories[project.category] ||
+            (await translateProjectText(project.category, lang));
+
+          return {
+            ...project,
+            title: await translateProjectText(project.title, lang),
+            category: translatedCategory,
+            desc: await translateProjectText(project.desc, lang),
+          };
+        }),
+      );
+
+      if (active) {
+        setTranslatedProjects(nextProjects);
+      }
+    }
+
+    syncProjectsLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [projects, lang, t.categories]);
+
+  const filteredProjectIds = new Set(
+    (activeFilter === "ALL WORK"
       ? projects
-      : projects.filter((p) => p.category === activeFilter);
+      : projects.filter((p) => p.category === activeFilter)
+    ).map((p) => p.id),
+  );
 
-  const categories = [
-    "ALL WORK",
-    "WEB DESIGN",
-    "GRAPHIC",
-    "PRINT",
-    "ILLUSTRATION",
-  ];
+  const filteredProjects = translatedProjects.filter((p) =>
+    filteredProjectIds.has(p.id),
+  );
+
+  const selectedProject =
+    selectedProjectId !== null
+      ? translatedProjects.find((p) => p.id === selectedProjectId) || null
+      : null;
 
   return (
     <section
@@ -64,32 +181,32 @@ export default function LatestProjects() {
               }}
             />
             <h2 className="relative z-10 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">
-              Latest&nbsp;Projects
+              {t.sectionTitle}
             </h2>
           </div>
         </div>
 
         {/* Thanh lọc danh mục (Filter Tabs) */}
         <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10 mb-16 text-xs font-bold tracking-widest text-neutral-500 dark:text-gray-400">
-          {categories.map((cat) => (
+          {CATEGORY_KEYS.map((catKey) => (
             <button
-              key={cat}
-              onClick={() => setActiveFilter(cat)}
+              key={catKey}
+              onClick={() => setActiveFilter(catKey)}
               className={`cursor-pointer transition-colors duration-300 pb-1 border-b-2 ${
-                activeFilter === cat
+                activeFilter === catKey
                   ? "text-neutral-900 border-neutral-900 dark:text-white dark:border-white"
                   : "border-transparent hover:text-neutral-900 dark:hover:text-gray-200"
               }`}
             >
-              {cat}
+              {t.categories[catKey] || catKey}
             </button>
           ))}
         </div>
 
         {/* Lưới dự án (Masonry / Grid nghệ thuật) */}
-        {projects.length === 0 ? (
+        {translatedProjects.length === 0 ? (
           <div className="text-center py-20 text-neutral-500 text-sm">
-            Đang cập nhật danh sách dự án...
+            {t.emptyProjects}
           </div>
         ) : (
           <motion.div
@@ -104,19 +221,17 @@ export default function LatestProjects() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 key={project.id}
-                onClick={() => setSelectedProject(project)}
+                onClick={() => setSelectedProjectId(project.id)}
                 className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group ${
                   project.span || "col-span-1 row-span-1"
                 }`}
               >
-                {/* Hình ảnh dự án */}
                 <img
                   src={project.image}
                   alt={project.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
 
-                {/* Lớp phủ mờ khi hover */}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
                   <span className="text-[10px] uppercase tracking-widest text-gray-300 mb-1">
                     {project.category}
@@ -141,15 +256,13 @@ export default function LatestProjects() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative w-full max-w-4xl bg-neutral-100 dark:bg-[#1a1a1a] border border-neutral-300 dark:border-white/10 overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-2 text-neutral-900 dark:text-white transition-colors duration-300 rounded-2xl"
             >
-              {/* Nút đóng modal */}
               <button
-                onClick={() => setSelectedProject(null)}
+                onClick={() => setSelectedProjectId(null)}
                 className="absolute top-4 right-4 z-20 bg-neutral-200 dark:bg-black/50 p-2 rounded-full text-neutral-700 dark:text-gray-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Hình ảnh lớn trong popup */}
               <div className="h-64 md:h-full w-full bg-neutral-200 dark:bg-black">
                 <img
                   src={selectedProject.image}
@@ -158,7 +271,6 @@ export default function LatestProjects() {
                 />
               </div>
 
-              {/* Thông tin chi tiết */}
               <div className="p-8 md:p-12 flex flex-col justify-between text-left">
                 <div>
                   <span className="inline-block px-3 py-1 bg-neutral-200 dark:bg-white/10 text-[10px] font-bold tracking-widest text-neutral-700 dark:text-gray-300 mb-4 rounded-md">
@@ -174,16 +286,16 @@ export default function LatestProjects() {
 
                 <div className="flex items-center space-x-4">
                   <button
-                    onClick={() => setSelectedProject(null)}
+                    onClick={() => setSelectedProjectId(null)}
                     className="flex-1 bg-neutral-900 text-white dark:bg-white dark:text-black py-3.5 text-xs font-bold uppercase tracking-widest transition-all hover:bg-neutral-800 dark:hover:bg-neutral-200 cursor-pointer rounded-xl"
                   >
-                    ĐÓNG
+                    {t.closeButton}
                   </button>
                   <a
                     href="#projects"
                     onClick={(e) => {
                       e.preventDefault();
-                      alert("Đường dẫn chi tiết dự án!");
+                      alert(t.projectDetailAlert);
                     }}
                     className="p-3.5 border border-neutral-300 dark:border-white/20 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors rounded-xl flex items-center justify-center"
                   >

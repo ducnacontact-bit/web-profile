@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Heart, Briefcase, Award, Quote } from "lucide-react";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 interface TestimonialItem {
   id: number;
@@ -12,60 +13,143 @@ interface TestimonialItem {
   content: string;
 }
 
+const uiText = {
+  VI: {
+    sectionTitle: "Đánh Giá Khách Hàng",
+    emptyTestimonials: "Đang cập nhật đánh giá từ khách hàng...",
+    fetchError: "Lỗi tải testimonials:",
+    stats: [
+      { id: 1, label: "Tách Trà", value: "1200" },
+      { id: 2, label: "Khách Hàng Hài Lòng", value: "1080" },
+      { id: 3, label: "Dự Án Hoàn Thành", value: "1170" },
+      { id: 4, label: "Giải Thưởng Đạt Được", value: "750" },
+    ],
+  },
+  EN: {
+    sectionTitle: "Testimonials",
+    emptyTestimonials: "Updating client testimonials...",
+    fetchError: "Failed to load testimonials:",
+    stats: [
+      { id: 1, label: "Cup of Tea", value: "1200" },
+      { id: 2, label: "Happy Client", value: "1080" },
+      { id: 3, label: "Project Complete", value: "1170" },
+      { id: 4, label: "Awards Win", value: "750" },
+    ],
+  },
+};
+
+const testimonialTranslationCache = new Map<string, string>();
+
+async function translateTestimonialText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (testimonialTranslationCache.has(cacheKey)) {
+    return testimonialTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        testimonialTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có endpoint dịch
+  }
+
+  return text;
+}
+
 export default function Testimonials() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
+  const [translatedTestimonials, setTranslatedTestimonials] = useState<
+    TestimonialItem[]
+  >([]);
+  const [isMobileView, setIsMobileView] = useState(false);
 
-  // Tải dữ liệu từ API /api/testimonials khi trang được tải
   useEffect(() => {
-    fetch("/api/testimonials")
+    const updateViewport = () => {
+      setIsMobileView(window.innerWidth < 1024);
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/testimonials", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setTestimonials(data);
         }
       })
-      .catch((err) => console.error("Lỗi tải testimonials:", err));
-  }, []);
+      .catch((err) => console.error(t.fetchError, err));
+  }, [t.fetchError]);
 
-  // Dữ liệu thống kê (Counters)
-  const stats = [
-    {
-      id: 1,
-      icon: <Trophy className="w-5 h-5 text-neutral-900 dark:text-white" />,
-      label: "Cup of Tea",
-      value: "1200",
-    },
-    {
-      id: 2,
-      icon: <Heart className="w-5 h-5 text-neutral-900 dark:text-white" />,
-      label: "Happy Client",
-      value: "1080",
-    },
-    {
-      id: 3,
-      icon: <Briefcase className="w-5 h-5 text-neutral-900 dark:text-white" />,
-      label: "Project Complete",
-      value: "1170",
-    },
-    {
-      id: 4,
-      icon: <Award className="w-5 h-5 text-neutral-900 dark:text-white" />,
-      label: "Awards Win",
-      value: "750",
-    },
+  useEffect(() => {
+    let active = true;
+
+    async function syncTestimonialsLanguage() {
+      if (testimonials.length === 0) {
+        if (active) setTranslatedTestimonials([]);
+        return;
+      }
+
+      const nextItems = await Promise.all(
+        testimonials.map(async (item) => ({
+          ...item,
+          role: item.role
+            ? await translateTestimonialText(item.role, lang)
+            : item.role,
+          content: await translateTestimonialText(item.content, lang),
+        })),
+      );
+
+      if (active) {
+        setTranslatedTestimonials(nextItems);
+      }
+    }
+
+    syncTestimonialsLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [testimonials, lang]);
+
+  const statIcons = [
+    <Trophy key={1} className="w-5 h-5 text-neutral-900 dark:text-white" />,
+    <Heart key={2} className="w-5 h-5 text-neutral-900 dark:text-white" />,
+    <Briefcase key={3} className="w-5 h-5 text-neutral-900 dark:text-white" />,
+    <Award key={4} className="w-5 h-5 text-neutral-900 dark:text-white" />,
   ];
 
-  // Hàm xử lý kéo trượt slide
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleDragEnd = (e: any, info: any) => {
+  const handleDragEnd = (_e: any, info: any) => {
     const threshold = 50;
     if (info.offset.x > threshold && currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
     } else if (
       info.offset.x < -threshold &&
-      testimonials.length > 0 &&
-      currentIndex < testimonials.length - 1
+      translatedTestimonials.length > 0 &&
+      currentIndex < translatedTestimonials.length - 1
     ) {
       setCurrentIndex(currentIndex + 1);
     }
@@ -77,7 +161,6 @@ export default function Testimonials() {
       className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white text-neutral-900 dark:bg-[#111] dark:text-white px-6 py-24 lg:px-24 transition-colors duration-300"
     >
       <div className="mx-auto w-full max-w-6xl">
-        {/* Tiêu đề "Testimonials" */}
         <div className="flex justify-center mb-16">
           <div className="relative inline-block text-center">
             <div
@@ -89,15 +172,14 @@ export default function Testimonials() {
               }}
             />
             <h2 className="relative z-10 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl bg-neutral-200 dark:bg-[#1a1a1a] px-8 py-2 border border-neutral-300 dark:border-white/5 shadow-md transition-colors duration-300 rounded-xl">
-              Testimonials
+              {t.sectionTitle}
             </h2>
           </div>
         </div>
 
-        {/* Khung Slider Testimonials */}
-        {testimonials.length === 0 ? (
+        {translatedTestimonials.length === 0 ? (
           <div className="text-center py-16 text-neutral-500 text-sm">
-            Đang cập nhật đánh giá từ khách hàng...
+            {t.emptyTestimonials}
           </div>
         ) : (
           <>
@@ -108,16 +190,15 @@ export default function Testimonials() {
                 dragConstraints={{ left: -300, right: 0 }}
                 onDragEnd={handleDragEnd}
                 animate={{
-                  x: `-${currentIndex * (window.innerWidth < 1024 ? 100 : 50)}%`,
+                  x: `-${currentIndex * (isMobileView ? 100 : 50)}%`,
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                {testimonials.map((item) => (
+                {translatedTestimonials.map((item) => (
                   <div
                     key={item.id}
                     className="w-full lg:w-[calc(50%-12px)] flex-shrink-0 relative bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 p-6 sm:p-8 pt-16 hover:border-neutral-400 dark:hover:border-white/20 transition-colors duration-300 shadow-sm rounded-xl"
                   >
-                    {/* Avatar tròn phía trên card */}
                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-20">
                       <div className="relative w-16 h-16">
                         <div className="w-full h-full overflow-hidden rounded-full border-4 border-neutral-200 dark:border-[#161616] bg-neutral-300 dark:bg-[#222] shadow-md transition-colors duration-300">
@@ -133,7 +214,6 @@ export default function Testimonials() {
                       </div>
                     </div>
 
-                    {/* Thông tin khách hàng */}
                     <div className="text-center mb-4 mt-2">
                       <h3 className="text-base font-bold text-neutral-900 dark:text-white">
                         {item.name}
@@ -143,7 +223,6 @@ export default function Testimonials() {
                       </span>
                     </div>
 
-                    {/* Nội dung đánh giá */}
                     <p className="text-xs sm:text-sm text-neutral-600 dark:text-gray-400 text-center leading-relaxed">
                       {item.content}
                     </p>
@@ -152,9 +231,8 @@ export default function Testimonials() {
               </motion.div>
             </div>
 
-            {/* Dots indicator */}
             <div className="flex justify-center items-center gap-2 mb-16">
-              {testimonials.map((_, idx) => (
+              {translatedTestimonials.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}
@@ -169,15 +247,14 @@ export default function Testimonials() {
           </>
         )}
 
-        {/* Phần Thống kê (Counters / Stats) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-10 border-t border-neutral-300 dark:border-white/10 transition-colors duration-300">
-          {stats.map((stat) => (
+          {t.stats.map((stat, idx) => (
             <div
               key={stat.id}
               className="flex flex-col items-center text-center group cursor-pointer"
             >
               <div className="mb-3 p-2.5 bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 group-hover:border-neutral-400 dark:group-hover:border-white/20 transition-colors duration-300 shadow-sm rounded-xl">
-                {stat.icon}
+                {statIcons[idx]}
               </div>
               <h4 className="text-xs sm:text-sm font-bold text-neutral-500 dark:text-gray-400 tracking-wide mb-1">
                 {stat.label}

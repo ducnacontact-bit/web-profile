@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { GraduationCap, Briefcase } from "lucide-react";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 interface ResumeItem {
   id: number;
@@ -13,24 +14,121 @@ interface ResumeItem {
   role?: string | null;
 }
 
-export default function Resume() {
-  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+const uiText = {
+  VI: {
+    sectionTitle: "Hồ Sơ Năng Lực",
+    educationTitle: "Học vấn:",
+    experienceTitle: "Kinh nghiệm:",
+    emptyEducation: "Đang cập nhật học vấn...",
+    emptyExperience: "Đang cập nhật kinh nghiệm...",
+    fetchError: "Lỗi tải dữ liệu Resume:",
+  },
+  EN: {
+    sectionTitle: "Resume",
+    educationTitle: "Education:",
+    experienceTitle: "Experience:",
+    emptyEducation: "Updating education...",
+    emptyExperience: "Updating experience...",
+    fetchError: "Failed to load Resume data:",
+  },
+};
 
-  // Lấy dữ liệu Resume từ API /api/resume khi tải trang
+const resumeTranslationCache = new Map<string, string>();
+
+async function translateResumeText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (resumeTranslationCache.has(cacheKey)) {
+    return resumeTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        resumeTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có endpoint dịch
+  }
+
+  return text;
+}
+
+export default function Resume() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
+  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [translatedResumes, setTranslatedResumes] = useState<ResumeItem[]>([]);
+
   useEffect(() => {
-    fetch("/api/resume")
+    fetch("/api/resume", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setResumes(data);
         }
       })
-      .catch((err) => console.error("Lỗi tải dữ liệu Resume:", err));
-  }, []);
+      .catch((err) => console.error(t.fetchError, err));
+  }, [t.fetchError]);
 
-  // Phân loại danh sách thành Education và Experience
-  const educationList = resumes.filter((item) => item.type === "education");
-  const experienceList = resumes.filter((item) => item.type === "experience");
+  useEffect(() => {
+    let active = true;
+
+    async function syncResumesLanguage() {
+      if (resumes.length === 0) {
+        if (active) setTranslatedResumes([]);
+        return;
+      }
+
+      const nextResumes = await Promise.all(
+        resumes.map(async (item) => ({
+          ...item,
+          time: item.time
+            ? await translateResumeText(item.time, lang)
+            : item.time,
+          title: await translateResumeText(item.title, lang),
+          desc: await translateResumeText(item.desc, lang),
+          institution: item.institution
+            ? await translateResumeText(item.institution, lang)
+            : item.institution,
+          role: item.role
+            ? await translateResumeText(item.role, lang)
+            : item.role,
+        })),
+      );
+
+      if (active) {
+        setTranslatedResumes(nextResumes);
+      }
+    }
+
+    syncResumesLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [resumes, lang]);
+
+  const educationList = translatedResumes.filter(
+    (item) => item.type === "education",
+  );
+  const experienceList = translatedResumes.filter(
+    (item) => item.type === "experience",
+  );
 
   return (
     <section
@@ -38,29 +136,24 @@ export default function Resume() {
       className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#1116] dark:text-white px-6 py-24 lg:px-24 transition-colors duration-300"
     >
       <div className="mx-auto w-full max-w-7xl">
-        {/* Tiêu đề "Resume" căn giữa */}
         <div className="flex justify-center mb-20">
           <h2 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl bg-neutral-200 dark:bg-[#1a1a1a] px-8 py-2 border border-neutral-300 dark:border-white/5 shadow-md transition-colors duration-300 rounded-xl">
-            Resume
+            {t.sectionTitle}
           </h2>
         </div>
 
-        {/* Lưới 2 cột: Education & Experience */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Cột 1: Education */}
           <div>
             <div className="flex items-center gap-3 mb-8">
               <GraduationCap className="w-6 h-6 text-neutral-900 dark:text-white" />
               <h3 className="text-xl font-bold tracking-wide text-neutral-900 dark:text-white">
-                Education:
+                {t.educationTitle}
               </h3>
             </div>
 
             <div className="space-y-6">
               {educationList.length === 0 ? (
-                <p className="text-xs text-neutral-500">
-                  Đang cập nhật học vấn...
-                </p>
+                <p className="text-xs text-neutral-500">{t.emptyEducation}</p>
               ) : (
                 educationList.map((item) => (
                   <div
@@ -86,20 +179,17 @@ export default function Resume() {
             </div>
           </div>
 
-          {/* Cột 2: Experience */}
           <div>
             <div className="flex items-center gap-3 mb-8">
               <Briefcase className="w-6 h-6 text-neutral-900 dark:text-white" />
               <h3 className="text-xl font-bold tracking-wide text-neutral-900 dark:text-white">
-                Experience:
+                {t.experienceTitle}
               </h3>
             </div>
 
             <div className="space-y-6">
               {experienceList.length === 0 ? (
-                <p className="text-xs text-neutral-500">
-                  Đang cập nhật kinh nghiệm...
-                </p>
+                <p className="text-xs text-neutral-500">{t.emptyExperience}</p>
               ) : (
                 experienceList.map((item) => (
                   <div

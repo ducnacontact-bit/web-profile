@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ArrowDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 interface HeroData {
   roles?: string[] | string;
@@ -18,17 +19,82 @@ interface HeroData {
     | string;
 }
 
+const uiText = {
+  VI: {
+    defaultGreeting: "Xin chào,",
+    defaultDescription:
+      "Tôi xây dựng những sản phẩm đơn giản, hữu ích\nvà luôn thích khám phá những công nghệ mới.",
+    defaultRoles: ["Kỹ sư Điện", "Lập trình viên", "Người sáng tạo"],
+    scroll: "Cuộn xuống",
+    fetchError: "Không thể tải dữ liệu Hero từ BE:",
+  },
+  EN: {
+    defaultGreeting: "Hello,",
+    defaultDescription:
+      "I build simple, useful products\nand always enjoy exploring new technologies.",
+    defaultRoles: ["Electrical Engineer", "Developer", "Creator"],
+    scroll: "Scroll",
+    fetchError: "Failed to load Hero data from BE:",
+  },
+};
+
+const heroTranslationCache = new Map<string, string>();
+
+async function translateHeroText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (heroTranslationCache.has(cacheKey)) {
+    return heroTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        heroTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có endpoint dịch
+  }
+
+  return text;
+}
+
 export default function Hero() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [heroData, setHeroData] = useState<HeroData>({
-    roles: ["Electrical Engineer", "Developer", "Creator"],
-    greeting: "Hello,",
-    description:
-      "Tôi xây dựng những sản phẩm đơn giản, hữu ích\nvà luôn thích khám phá những công nghệ mới.",
+    roles: uiText.EN.defaultRoles,
+    greeting: uiText.EN.defaultGreeting,
+    description: uiText.EN.defaultDescription,
     darkBgUrl: "",
     lightBgUrl: "",
     socials: [],
   });
+
+  const [displayGreeting, setDisplayGreeting] = useState(
+    uiText.EN.defaultGreeting,
+  );
+  const [displayDescription, setDisplayDescription] = useState(
+    uiText.EN.defaultDescription,
+  );
+  const [displayRoles, setDisplayRoles] = useState<string[]>(
+    uiText.EN.defaultRoles,
+  );
 
   const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
   const [currentText, setCurrentText] = useState("");
@@ -49,33 +115,68 @@ export default function Hero() {
                   ? JSON.parse(data.socials)
                   : data.socials;
             }
-          } catch (e) {
+          } catch {
             parsedSocials = [];
           }
 
           setHeroData({
-            roles: data.roles || [
-              "Electrical Engineer",
-              "Developer",
-              "Creator",
-            ],
-            greeting: data.greeting || "Hello,",
-            description: data.description || "",
+            roles: data.roles || uiText.EN.defaultRoles,
+            greeting: data.greeting || uiText.EN.defaultGreeting,
+            description: data.description || uiText.EN.defaultDescription,
             darkBgUrl: data.darkBgUrl || "",
             lightBgUrl: data.lightBgUrl || "",
             socials: parsedSocials,
           });
         }
       })
-      .catch((err) => console.error("Không thể tải dữ liệu Hero từ BE:", err))
+      .catch((err) => console.error(t.fetchError, err))
       .finally(() => setIsLoaded(true));
-  }, []);
+  }, [t.fetchError]);
 
-  const roles: string[] = Array.isArray(heroData.roles)
-    ? heroData.roles
-    : typeof heroData.roles === "string"
-      ? heroData.roles.split(",").map((r) => r.trim())
-      : ["Electrical Engineer", "Developer", "Creator"];
+  useEffect(() => {
+    let active = true;
+
+    const rawRoles: string[] = Array.isArray(heroData.roles)
+      ? heroData.roles
+      : typeof heroData.roles === "string"
+        ? heroData.roles
+            .split(",")
+            .map((r) => r.trim())
+            .filter(Boolean)
+        : t.defaultRoles;
+
+    async function syncLanguage() {
+      const nextGreeting = heroData.greeting
+        ? await translateHeroText(heroData.greeting, lang)
+        : t.defaultGreeting;
+
+      const nextDescription = heroData.description
+        ? await translateHeroText(heroData.description, lang)
+        : t.defaultDescription;
+
+      const nextRoles =
+        rawRoles.length > 0
+          ? await Promise.all(
+              rawRoles.map((role) => translateHeroText(role, lang)),
+            )
+          : t.defaultRoles;
+
+      if (active) {
+        setDisplayGreeting(nextGreeting);
+        setDisplayDescription(nextDescription);
+        setDisplayRoles(nextRoles.length > 0 ? nextRoles : t.defaultRoles);
+        setCurrentRoleIndex(0);
+        setCurrentText("");
+        setIsDeleting(false);
+      }
+    }
+
+    syncLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [heroData, lang, t.defaultGreeting, t.defaultDescription, t.defaultRoles]);
 
   useEffect(() => {
     const checkTheme = () => {
@@ -94,7 +195,7 @@ export default function Hero() {
   }, []);
 
   useEffect(() => {
-    const fullText = roles[currentRoleIndex] || "";
+    const fullText = displayRoles[currentRoleIndex] || "";
 
     const handleTyping = () => {
       if (!isDeleting) {
@@ -107,7 +208,7 @@ export default function Hero() {
         setCurrentText(fullText.substring(0, currentText.length - 1));
         if (currentText === "") {
           setIsDeleting(false);
-          setCurrentRoleIndex((prev) => (prev + 1) % roles.length);
+          setCurrentRoleIndex((prev) => (prev + 1) % displayRoles.length);
           setTypingSpeed(150);
         }
       }
@@ -115,7 +216,7 @@ export default function Hero() {
 
     const timer = setTimeout(handleTyping, typingSpeed);
     return () => clearTimeout(timer);
-  }, [currentText, isDeleting, currentRoleIndex, typingSpeed, roles]);
+  }, [currentText, isDeleting, currentRoleIndex, typingSpeed, displayRoles]);
 
   const getSocialIconAndColor = (platform: string) => {
     const name = platform.toLowerCase();
@@ -207,7 +308,7 @@ export default function Hero() {
           transition={{ duration: 0.6 }}
           className="text-lg font-medium text-neutral-700 dark:text-gray-300 sm:text-xl md:text-2xl"
         >
-          {heroData.greeting || "Hello,"}
+          {displayGreeting || t.defaultGreeting}
         </motion.p>
 
         <div className="my-2 flex flex-wrap items-center justify-center">
@@ -226,7 +327,7 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold tracking-widest text-neutral-700 dark:text-gray-400 sm:text-sm md:text-base uppercase"
         >
-          {roles.map((role, idx) => (
+          {displayRoles.map((role, idx) => (
             <span key={idx} className="flex items-center gap-3">
               {idx > 0 && (
                 <span className="text-[#d99b00] dark:text-[#ffb400]">◆</span>
@@ -242,7 +343,7 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="mx-auto mt-6 max-w-xl px-6 text-sm leading-7 text-neutral-700 dark:text-gray-400 sm:text-base font-medium whitespace-pre-line"
         >
-          {heroData.description}
+          {displayDescription}
         </motion.p>
 
         <motion.div
@@ -295,7 +396,9 @@ export default function Hero() {
         className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 hidden sm:block"
       >
         <div className="flex flex-col items-center gap-1 text-neutral-600 dark:text-gray-500">
-          <span className="text-[10px] uppercase tracking-[0.3em]">Scroll</span>
+          <span className="text-[10px] uppercase tracking-[0.3em]">
+            {t.scroll}
+          </span>
           <motion.div
             animate={{ y: [0, 6, 0] }}
             transition={{ duration: 1.5, repeat: Infinity }}

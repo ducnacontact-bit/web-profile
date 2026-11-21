@@ -12,8 +12,8 @@ import {
   Globe,
   Layers,
   X,
-  LucideIcon,
 } from "lucide-react";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 interface ServiceItem {
   id: number;
@@ -23,7 +23,57 @@ interface ServiceItem {
   fullDetail: string;
 }
 
-// Hàm ánh xạ tên icon string từ CSDL sang component Icon của Lucide
+const uiText = {
+  VI: {
+    sectionTitle: "Dịch Vụ Của Tôi",
+    emptyServices: "Đang cập nhật dịch vụ...",
+    viewDetail: "Xem chi tiết",
+    closeButton: "ĐÓNG",
+    fetchError: "Lỗi tải dịch vụ:",
+  },
+  EN: {
+    sectionTitle: "My Services",
+    emptyServices: "Updating services...",
+    viewDetail: "View details",
+    closeButton: "CLOSE",
+    fetchError: "Failed to load services:",
+  },
+};
+
+const serviceTranslationCache = new Map<string, string>();
+
+async function translateServiceText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (serviceTranslationCache.has(cacheKey)) {
+    return serviceTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        serviceTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có endpoint dịch
+  }
+
+  return text;
+}
+
 const getServiceIcon = (iconName: string) => {
   const iconMap: { [key: string]: React.ReactNode } = {
     Monitor: <Monitor className="w-8 h-8 text-neutral-900 dark:text-white" />,
@@ -48,37 +98,74 @@ const getServiceIcon = (iconName: string) => {
 };
 
 export default function Services() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [selectedService, setSelectedService] = useState<ServiceItem | null>(
+  const [translatedServices, setTranslatedServices] = useState<ServiceItem[]>(
+    [],
+  );
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
     null,
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
 
-  // Trạng thái phục vụ tính năng click và giữ chuột kéo (drag-to-scroll) mượt mà
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
 
-  // Tải dữ liệu dịch vụ từ API
   useEffect(() => {
-    fetch("/api/services")
+    fetch("/api/services", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setServices(data);
         }
       })
-      .catch((err) => console.error("Lỗi tải dịch vụ:", err));
-  }, []);
+      .catch((err) => console.error(t.fetchError, err));
+  }, [t.fetchError]);
 
-  // Gom nhóm mỗi 4 dịch vụ thành 1 slide trang
-  const chunks = [];
-  for (let i = 0; i < services.length; i += 4) {
-    chunks.push(services.slice(i, i + 4));
+  useEffect(() => {
+    let active = true;
+
+    async function syncServicesLanguage() {
+      if (services.length === 0) {
+        if (active) setTranslatedServices([]);
+        return;
+      }
+
+      const nextServices = await Promise.all(
+        services.map(async (service) => ({
+          ...service,
+          title: await translateServiceText(service.title, lang),
+          shortDesc: await translateServiceText(service.shortDesc, lang),
+          fullDetail: await translateServiceText(service.fullDetail, lang),
+        })),
+      );
+
+      if (active) {
+        setTranslatedServices(nextServices);
+      }
+    }
+
+    syncServicesLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [services, lang]);
+
+  const chunks: ServiceItem[][] = [];
+  for (let i = 0; i < translatedServices.length; i += 4) {
+    chunks.push(translatedServices.slice(i, i + 4));
   }
 
-  // Các hàm xử lý kéo chuột (Drag-to-scroll)
+  const selectedService =
+    selectedServiceId !== null
+      ? translatedServices.find((s) => s.id === selectedServiceId) || null
+      : null;
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!sliderRef.current) return;
     setIsDragging(true);
@@ -123,7 +210,6 @@ export default function Services() {
       className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#161616] dark:text-white px-6 py-20 lg:px-24 transition-colors duration-300"
     >
       <div className="mx-auto w-full max-w-7xl">
-        {/* Tiêu đề "My Services" với chấm lưới đồng bộ màu chữ */}
         <div className="flex justify-center mb-16">
           <div className="relative inline-block text-center">
             <div
@@ -135,12 +221,11 @@ export default function Services() {
               }}
             />
             <h2 className="relative z-10 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">
-              My&nbsp;Services
+              {t.sectionTitle}
             </h2>
           </div>
         </div>
 
-        {/* Khung nền lớn chứa slider dịch vụ */}
         <div className="bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 shadow-2xl py-2 overflow-hidden transition-colors duration-300">
           <div
             ref={sliderRef}
@@ -158,7 +243,7 @@ export default function Services() {
           >
             {chunks.length === 0 ? (
               <div className="w-full text-center py-16 text-neutral-500 text-sm">
-                Đang cập nhật dịch vụ...
+                {t.emptyServices}
               </div>
             ) : (
               chunks.map((slideGroup, slideIndex) => (
@@ -175,29 +260,25 @@ export default function Services() {
                       transition={{ duration: 0.6, delay: index * 0.1 }}
                       onClick={() => {
                         if (!isDragging) {
-                          setSelectedService(service);
+                          setSelectedServiceId(service.id);
                         }
                       }}
                       className="flex flex-col items-center text-center p-8 sm:p-10 cursor-pointer transition-colors duration-300 hover:bg-neutral-300/50 dark:hover:bg-[#1e1e1e] group"
                     >
-                      {/* Icon dịch vụ */}
                       <div className="mb-6 flex h-16 w-16 items-center justify-center transition-transform duration-300 group-hover:scale-110 pointer-events-none">
                         {getServiceIcon(service.iconName)}
                       </div>
 
-                      {/* Tiêu đề dịch vụ */}
                       <h3 className="mb-4 text-sm font-bold tracking-widest text-neutral-900 dark:text-white transition-colors pointer-events-none">
                         {service.title}
                       </h3>
 
-                      {/* Mô tả ngắn */}
                       <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-gray-400 mb-6 transition-colors pointer-events-none">
                         {service.shortDesc}
                       </p>
 
-                      {/* Gợi ý click xem chi tiết */}
                       <span className="mt-auto text-[10px] font-bold uppercase tracking-widest text-neutral-900 dark:text-white underline underline-offset-4 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        Xem chi tiết
+                        {t.viewDetail}
                       </span>
                     </motion.div>
                   ))}
@@ -207,7 +288,6 @@ export default function Services() {
           </div>
         </div>
 
-        {/* Dấu chấm phân trang (Slider Dots) chỉ hiển thị khi có nhiều hơn 1 trang slide */}
         {chunks.length > 1 && (
           <div className="mt-8 flex justify-center items-center space-x-3">
             {chunks.map((_, index) => (
@@ -225,7 +305,6 @@ export default function Services() {
         )}
       </div>
 
-      {/* Modal Popup hiển thị chi tiết khi bấm vào khối dịch vụ */}
       <AnimatePresence>
         {selectedService && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 px-4 backdrop-blur-sm">
@@ -235,15 +314,13 @@ export default function Services() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative w-full max-w-lg bg-neutral-100 dark:bg-[#1a1a1a] border border-neutral-300 dark:border-white/10 p-8 shadow-2xl text-left transition-colors duration-300 rounded-2xl"
             >
-              {/* Nút đóng */}
               <button
-                onClick={() => setSelectedService(null)}
+                onClick={() => setSelectedServiceId(null)}
                 className="absolute top-6 right-6 text-neutral-500 dark:text-gray-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-6 h-6" />
               </button>
 
-              {/* Tiêu đề popup kèm icon */}
               <div className="flex items-center space-x-4 mb-6">
                 <div className="flex h-14 w-14 items-center justify-center bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-white/10 rounded-xl">
                   {getServiceIcon(selectedService.iconName)}
@@ -253,17 +330,15 @@ export default function Services() {
                 </h3>
               </div>
 
-              {/* Nội dung chi tiết đầy đủ */}
               <p className="text-sm leading-relaxed text-neutral-600 dark:text-gray-300 mb-8">
                 {selectedService.fullDetail}
               </p>
 
-              {/* Nút đóng popup */}
               <button
-                onClick={() => setSelectedService(null)}
+                onClick={() => setSelectedServiceId(null)}
                 className="w-full bg-neutral-900 text-white dark:bg-white dark:text-black py-3.5 text-xs font-bold uppercase tracking-widest transition-all hover:bg-neutral-800 dark:hover:bg-neutral-200 cursor-pointer rounded-xl"
               >
-                ĐÓNG
+                {t.closeButton}
               </button>
             </motion.div>
           </div>

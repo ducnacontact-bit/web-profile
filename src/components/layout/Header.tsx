@@ -9,7 +9,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage, type Lang } from "@/components/LanguageProvider";
 
 const translations = {
   EN: {
@@ -50,11 +50,48 @@ interface NavbarItem {
   children?: NavbarChild[];
 }
 
+const navTranslationCache = new Map<string, string>();
+
+async function translateNavText(
+  text: string,
+  targetLang: Lang,
+): Promise<string> {
+  const trimmed = text?.trim();
+  if (!trimmed) return text || "";
+
+  const cacheKey = `${targetLang}:${trimmed}`;
+  if (navTranslationCache.has(cacheKey)) {
+    return navTranslationCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: trimmed, targetLang }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.translatedText) {
+        navTranslationCache.set(cacheKey, data.translatedText);
+        return data.translatedText;
+      }
+    }
+  } catch {
+    // Giữ nguyên text gốc nếu không có /api/translate
+  }
+
+  return text;
+}
+
 export default function Header() {
   const { lang: language, toggleLang: toggleLanguage } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavbarItem[]>([]);
+  const [translatedNavItems, setTranslatedNavItems] = useState<NavbarItem[]>(
+    [],
+  );
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   const [logoConfig, setLogoConfig] = useState({
@@ -105,7 +142,7 @@ export default function Header() {
     fetchSettings();
     window.addEventListener("logoChanged", fetchSettings);
 
-    fetch("/api/navbar")
+    fetch("/api/navbar", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -119,6 +156,51 @@ export default function Header() {
       window.removeEventListener("logoChanged", fetchSettings);
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function syncNavLanguage() {
+      if (navItems.length === 0) {
+        if (active) setTranslatedNavItems([]);
+        return;
+      }
+
+      const nextItems = await Promise.all(
+        navItems.map(async (item) => {
+          const translatedTitle = await translateNavText(item.title, language);
+          const translatedChildren =
+            item.children && item.children.length > 0
+              ? await Promise.all(
+                  item.children.map(async (child) => ({
+                    ...child,
+                    title: await translateNavText(child.title, language),
+                    desc: child.desc
+                      ? await translateNavText(child.desc, language)
+                      : child.desc,
+                  })),
+                )
+              : item.children;
+
+          return {
+            ...item,
+            title: translatedTitle,
+            children: translatedChildren,
+          };
+        }),
+      );
+
+      if (active) {
+        setTranslatedNavItems(nextItems);
+      }
+    }
+
+    syncNavLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [navItems, language]);
 
   const toggleTheme = () => {
     const newMode = !isDarkMode;
@@ -170,7 +252,7 @@ export default function Header() {
 
           <div className="flex items-center gap-6">
             <nav className="hidden items-center gap-7 md:flex">
-              {navItems.map((item) => {
+              {translatedNavItems.map((item) => {
                 const hasChildren = item.children && item.children.length > 0;
                 return (
                   <div key={item.id} className="relative group py-2">
@@ -279,7 +361,7 @@ export default function Header() {
               <span className="text-[11px] font-bold tracking-wider text-neutral-500 dark:text-gray-500 uppercase">
                 {t.categories}
               </span>
-              {navItems.map((item) => {
+              {translatedNavItems.map((item) => {
                 const hasChildren = item.children && item.children.length > 0;
                 const isOpen = openMobileMenus[item.id];
 

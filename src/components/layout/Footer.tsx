@@ -2,8 +2,29 @@
 
 import React from "react";
 import { Globe, Share2, MessageCircle, ArrowUp } from "lucide-react";
+import { useLanguage } from "@/components/LanguageProvider";
+
+const uiText = {
+  VI: {
+    rights: "Đã đăng ký bản quyền.",
+    websiteTitle: "Website / Mạng xã hội",
+    shareTitle: "Chia sẻ",
+    messageTitle: "Tin nhắn",
+    scrollTopTitle: "Cuộn lên đầu trang",
+  },
+  EN: {
+    rights: "All Rights Reserved.",
+    websiteTitle: "Website / Social",
+    shareTitle: "Share",
+    messageTitle: "Message",
+    scrollTopTitle: "Scroll to top",
+  },
+};
 
 export default function Footer() {
+  const { lang } = useLanguage();
+  const t = uiText[lang];
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -15,8 +36,8 @@ export default function Footer() {
         <div className="text-center md:text-left">
           <p className="text-xs sm:text-sm text-gray-400">
             © {new Date().getFullYear()}{" "}
-            <span className="text-white font-semibold">Nguyenanhduc</span>. All
-            Rights Reserved.
+            <span className="text-white font-semibold">Nguyenanhduc</span>.{" "}
+            {t.rights}
           </p>
         </div>
 
@@ -25,21 +46,21 @@ export default function Footer() {
           <a
             href="#facebook"
             className="w-9 h-9 rounded-full bg-[#161616] border border-white/5 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors"
-            title="Website / Social"
+            title={t.websiteTitle}
           >
             <Globe className="w-4 h-4" />
           </a>
           <a
             href="#share"
             className="w-9 h-9 rounded-full bg-[#161616] border border-white/5 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors"
-            title="Share"
+            title={t.shareTitle}
           >
             <Share2 className="w-4 h-4" />
           </a>
           <a
             href="#chat"
             className="w-9 h-9 rounded-full bg-[#161616] border border-white/5 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors"
-            title="Message"
+            title={t.messageTitle}
           >
             <MessageCircle className="w-4 h-4" />
           </a>
@@ -50,7 +71,7 @@ export default function Footer() {
           <button
             onClick={scrollToTop}
             className="w-10 h-10 rounded-full bg-[#161616] border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-colors cursor-pointer shadow-md"
-            title="Scroll to top"
+            title={t.scrollTopTitle}
           >
             <ArrowUp className="w-4 h-4" />
           </button>
