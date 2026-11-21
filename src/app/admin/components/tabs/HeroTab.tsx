@@ -20,7 +20,7 @@ export default function HeroTab() {
 
   // Tải dữ liệu Hero từ API khi vào trang Admin
   useEffect(() => {
-    fetch("/api/hero")
+    fetch("/api/hero", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data && !data.error) {
@@ -43,7 +43,6 @@ export default function HeroTab() {
       })
       .catch((err) => console.error("Lỗi tải cấu hình Hero:", err));
   }, []);
-
   // Xử lý upload ảnh nền từ máy tính (chuyển sang Base64)
   const handleBgUpload = (
     e: React.ChangeEvent<HTMLInputElement>,

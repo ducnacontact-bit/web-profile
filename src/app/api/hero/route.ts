@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "../../../lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -12,7 +15,7 @@ export async function GET() {
           description: "Tôi xây dựng những sản phẩm đơn giản, hữu ích...",
           darkBgUrl: "",
           lightBgUrl: "",
-          socials: "[]", // Thêm giá trị mặc định cho socials
+          socials: "[]",
         },
       });
     }
@@ -25,14 +28,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const {
-      greeting,
-      roles,
-      description,
-      socials, // Nhận thêm trường socials được gửi lên từ AdminDashboard
-      darkBgUrl,
-      lightBgUrl,
-    } = body;
+    const { greeting, roles, description, socials, darkBgUrl, lightBgUrl } =
+      body;
 
     let hero = await db.heroSection.findFirst();
 
@@ -41,7 +38,7 @@ export async function POST(request: Request) {
       roles,
       description,
       socials:
-        typeof socials === "string" ? socials : JSON.stringify(socials || []), // Đảm bảo lưu dưới dạng chuỗi JSON
+        typeof socials === "string" ? socials : JSON.stringify(socials || []),
       darkBgUrl,
       lightBgUrl,
     };
@@ -56,6 +53,9 @@ export async function POST(request: Request) {
         data: dataToSave,
       });
     }
+
+    revalidatePath("/");
+    revalidatePath("/admin");
 
     return NextResponse.json(hero);
   } catch (error) {

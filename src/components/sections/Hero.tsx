@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowDown, Globe } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface HeroData {
@@ -19,15 +19,14 @@ interface HeroData {
 }
 
 export default function Hero() {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [heroData, setHeroData] = useState<HeroData>({
     roles: ["Electrical Engineer", "Developer", "Creator"],
     greeting: "Hello,",
     description:
       "Tôi xây dựng những sản phẩm đơn giản, hữu ích\nvà luôn thích khám phá những công nghệ mới.",
-    darkBgUrl:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=2000&q=80",
-    lightBgUrl:
-      "https://images.pexels.com/photos/38510810/pexels-photo-38510810.jpeg",
+    darkBgUrl: "",
+    lightBgUrl: "",
     socials: [],
   });
 
@@ -37,12 +36,11 @@ export default function Hero() {
   const [typingSpeed, setTypingSpeed] = useState(150);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Lấy dữ liệu từ Backend khi load trang và xử lý parse an toàn cho socials
   useEffect(() => {
-    fetch("/api/hero")
+    fetch("/api/hero", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (data) {
+        if (data && !data.error) {
           let parsedSocials = [];
           try {
             if (data.socials) {
@@ -69,7 +67,8 @@ export default function Hero() {
           });
         }
       })
-      .catch((err) => console.error("Không thể tải dữ liệu Hero từ BE:", err));
+      .catch((err) => console.error("Không thể tải dữ liệu Hero từ BE:", err))
+      .finally(() => setIsLoaded(true));
   }, []);
 
   const roles: string[] = Array.isArray(heroData.roles)
@@ -181,6 +180,12 @@ export default function Hero() {
     };
   };
 
+  const activeBgUrl = isLoaded
+    ? isDarkMode
+      ? heroData.darkBgUrl
+      : heroData.lightBgUrl
+    : "";
+
   return (
     <section
       id="home"
@@ -191,13 +196,7 @@ export default function Hero() {
           isDarkMode ? "opacity-30" : "opacity-75"
         }`}
         style={{
-          backgroundImage: isDarkMode
-            ? heroData.darkBgUrl
-              ? `url('${heroData.darkBgUrl}')`
-              : undefined
-            : heroData.lightBgUrl
-              ? `url('${heroData.lightBgUrl}')`
-              : undefined,
+          backgroundImage: activeBgUrl ? `url('${activeBgUrl}')` : undefined,
         }}
       />
 
@@ -246,7 +245,6 @@ export default function Hero() {
           {heroData.description}
         </motion.p>
 
-        {/* Social Icons */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
