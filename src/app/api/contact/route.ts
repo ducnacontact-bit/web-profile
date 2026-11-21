@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // chỉnh lại path nếu Prisma client của bạn nằm ở chỗ khác
+import { db } from "../../../lib/db";
+
+export const dynamic = "force-dynamic";
 
 const DEFAULT_CONTACT = {
   phone: "+0044 545 989 626\n+8801 909 130 830",
@@ -9,7 +11,7 @@ const DEFAULT_CONTACT = {
 
 export async function GET() {
   try {
-    const info = await prisma.contactInfo.findFirst({
+    const info = await db.contactInfo.findFirst({
       orderBy: { id: "asc" },
     });
 
@@ -43,16 +45,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const existing = await prisma.contactInfo.findFirst({
+    const existing = await db.contactInfo.findFirst({
       orderBy: { id: "asc" },
     });
 
     const saved = existing
-      ? await prisma.contactInfo.update({
+      ? await db.contactInfo.update({
           where: { id: existing.id },
           data: { phone, address, email },
         })
-      : await prisma.contactInfo.create({
+      : await db.contactInfo.create({
           data: { phone, address, email },
         });
 
