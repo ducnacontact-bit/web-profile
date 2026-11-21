@@ -1,49 +1,73 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma"; // chỉnh lại path nếu Prisma client của bạn nằm ở chỗ khác
 
-// Khai báo giá trị mặc định ban đầu để form không bị trống khi mới load
-let contactConfig = {
-  address: "123 Đường ABC, Hà Nội",
-  email: "contact@domain.com",
-  phone: "0987654321",
-  mapUrl: "https://google.com/maps/...",
+const DEFAULT_CONTACT = {
+  phone: "+0044 545 989 626\n+8801 909 130 830",
+  address: "28 Green Tower, Street Name,\nNew York City, USA",
+  email: "www.marveltheme.com\nwww.yourmail@gmail.com",
 };
 
-// 1. Phương thức GET: Lấy thông tin cấu hình hiện tại
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    data: contactConfig,
-  });
+  try {
+    const info = await prisma.contactInfo.findFirst({
+      orderBy: { id: "asc" },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: info || DEFAULT_CONTACT,
+    });
+  } catch (error) {
+    console.error("GET /api/contact error:", error);
+    return NextResponse.json(
+      { success: false, error: "Lỗi tải thông tin liên hệ." },
+      { status: 500 },
+    );
+  }
 }
 
-// 2. Phương thức POST: Lưu lại cấu hình mới do Admin nhập
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { address, email, phone, mapUrl } = body;
+    const phone = String(body?.phone ?? "").trim();
+    const address = String(body?.address ?? "").trim();
+    const email = String(body?.email ?? "").trim();
 
-    // Cập nhật lại dữ liệu cấu hình
-    contactConfig = {
-      address: address !== undefined ? address : contactConfig.address,
-      email: email !== undefined ? email : contactConfig.email,
-      phone: phone !== undefined ? phone : contactConfig.phone,
-      mapUrl: mapUrl !== undefined ? mapUrl : contactConfig.mapUrl,
-    };
+    if (!phone || !address || !email) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Vui lòng nhập đầy đủ phone, address và email.",
+        },
+        { status: 400 },
+      );
+    }
 
-    console.log("=== ĐÃ CẬP NHẬT CẤU HÌNH CONTACT ===");
-    console.log(contactConfig);
+    const existing = await prisma.contactInfo.findFirst({
+      orderBy: { id: "asc" },
+    });
+
+    const saved = existing
+      ? await prisma.contactInfo.update({
+          where: { id: existing.id },
+          data: { phone, address, email },
+        })
+      : await prisma.contactInfo.create({
+          data: { phone, address, email },
+        });
 
     return NextResponse.json(
       {
         success: true,
-        message: "Lưu cấu hình contact thành công!",
-        data: contactConfig,
+        message: "Cập nhật thông tin liên hệ thành công!",
+        data: saved,
       },
       { status: 200 },
     );
   } catch (error) {
+    console.error("POST /api/contact error:", error);
     return NextResponse.json(
-      { success: false, error: "Lỗi hệ thống khi lưu cấu hình." },
+      { success: false, error: "Lỗi hệ thống khi lưu cấu hình contact." },
       { status: 500 },
     );
   }
