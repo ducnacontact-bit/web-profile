@@ -10,14 +10,17 @@ interface ContactConfig {
   email: string;
 }
 
+const FALLBACK_CONTACT: ContactConfig = {
+  phone: "+0044 545 989 626\n+8801 909 130 830",
+  address: "28 Green Tower, Street Name,\nNew York City, USA",
+  email: "www.marveltheme.com\nwww.yourmail@gmail.com",
+};
+
 const uiText = {
   VI: {
     heading: "Bạn Muốn Bắt Đầu Làm Việc Cùng Tôi?",
     subheading: "Hãy kể cho tôi nghe về câu chuyện dự án và yêu cầu của bạn",
     startProject: "BẮT ĐẦU DỰ ÁN",
-    defaultPhone: "+0044 545 989 626\n+8801 909 130 830",
-    defaultAddress: "28 Green Tower, Street Name,\nNew York City, USA",
-    defaultEmail: "www.marveltheme.com\nwww.yourmail@gmail.com",
     namePlaceholder: "Tên của bạn",
     emailPlaceholder: "Email của bạn",
     budgetPlaceholder: "Ngân sách dự kiến",
@@ -34,9 +37,6 @@ const uiText = {
     heading: "Wanna Start Work with me?",
     subheading: "Tell me about your project story and project brief",
     startProject: "START PROJECT",
-    defaultPhone: "+0044 545 989 626\n+8801 909 130 830",
-    defaultAddress: "28 Green Tower, Street Name,\nNew York City, USA",
-    defaultEmail: "www.marveltheme.com\nwww.yourmail@gmail.com",
     namePlaceholder: "Your Name",
     emailPlaceholder: "Your Email",
     budgetPlaceholder: "Your Budget",
@@ -79,7 +79,7 @@ async function translateContactText(
       }
     }
   } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
+    // Giữ nguyên dữ liệu từ DB nếu /api/translate lỗi
   }
 
   return text;
@@ -89,13 +89,11 @@ export default function Contact() {
   const { lang } = useLanguage();
   const t = uiText[lang];
 
-  const [contactInfo, setContactInfo] = useState<ContactConfig>({
-    phone: "",
-    address: "",
-    email: "",
-  });
-
-  const [displayAddress, setDisplayAddress] = useState("");
+  const [contactInfo, setContactInfo] =
+    useState<ContactConfig>(FALLBACK_CONTACT);
+  const [displayAddress, setDisplayAddress] = useState<string>(
+    FALLBACK_CONTACT.address,
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -106,29 +104,44 @@ export default function Contact() {
 
   const [loading, setLoading] = useState(false);
 
+  // Luôn lấy dữ liệu thật từ DB qua /api/contact cho cả VI và EN
   useEffect(() => {
+    let active = true;
+
     fetch("/api/contact", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
+        if (!active) return;
         const info = data?.data || data;
         if (info) {
           setContactInfo({
-            phone: info.phone || t.defaultPhone,
-            address: info.address || t.defaultAddress,
-            email: info.email || t.defaultEmail,
+            phone: info.phone?.trim() ? info.phone : FALLBACK_CONTACT.phone,
+            address: info.address?.trim()
+              ? info.address
+              : FALLBACK_CONTACT.address,
+            email: info.email?.trim() ? info.email : FALLBACK_CONTACT.email,
           });
         }
       })
-      .catch((err) => console.error(t.fetchError, err));
-  }, [t.fetchError, t.defaultPhone, t.defaultAddress, t.defaultEmail]);
+      .catch((err) => console.error(uiText.VI.fetchError, err));
 
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Dịch địa chỉ từ DB theo ngôn ngữ hiện tại (VI / EN) mà không đè dữ liệu mẫu cứng
   useEffect(() => {
     let active = true;
 
     async function syncAddressLanguage() {
-      const sourceAddress = contactInfo.address || t.defaultAddress;
-      const nextAddress = await translateContactText(sourceAddress, lang);
+      const sourceAddress = contactInfo.address || FALLBACK_CONTACT.address;
       if (active) {
+        setDisplayAddress(sourceAddress);
+      }
+
+      const nextAddress = await translateContactText(sourceAddress, lang);
+      if (active && nextAddress) {
         setDisplayAddress(nextAddress);
       }
     }
@@ -138,7 +151,7 @@ export default function Contact() {
     return () => {
       active = false;
     };
-  }, [contactInfo.address, t.defaultAddress, lang]);
+  }, [contactInfo.address, lang]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +208,7 @@ export default function Contact() {
                 <Headphones className="w-5 h-5" />
               </div>
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-gray-300 font-medium leading-relaxed whitespace-pre-line">
-                {contactInfo.phone || t.defaultPhone}
+                {contactInfo.phone}
               </p>
             </div>
 
@@ -204,7 +217,7 @@ export default function Contact() {
                 <MapPin className="w-5 h-5" />
               </div>
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-gray-300 font-medium leading-relaxed whitespace-pre-line">
-                {displayAddress || contactInfo.address || t.defaultAddress}
+                {displayAddress}
               </p>
             </div>
 
@@ -213,7 +226,7 @@ export default function Contact() {
                 <Mail className="w-5 h-5" />
               </div>
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-gray-300 font-medium leading-relaxed whitespace-pre-line">
-                {contactInfo.email || t.defaultEmail}
+                {contactInfo.email}
               </p>
             </div>
           </div>
