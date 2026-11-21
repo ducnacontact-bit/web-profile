@@ -9,6 +9,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const translations = {
   EN: {
@@ -50,13 +51,12 @@ interface NavbarItem {
 }
 
 export default function Header() {
+  const { lang: language, toggleLang: toggleLanguage } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavbarItem[]>([]);
-  const [language, setLanguage] = useState<"EN" | "VI">("EN");
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // State lưu thông tin cấu hình Logo từ API
   const [logoConfig, setLogoConfig] = useState({
     logo_dark: "/logo.png",
     logo_light: "/logodark.png",
@@ -64,14 +64,12 @@ export default function Header() {
     logo_width: "auto",
   });
 
-  // State quản lý trạng thái mở/đóng menu con trong sidebar
   const [openMobileMenus, setOpenMobileMenus] = useState<
     Record<number, boolean>
   >({});
 
   const t = translations[language];
 
-  // Hàm gọi API lấy cấu hình logo và cài đặt chung
   const fetchSettings = () => {
     fetch("/api/settings")
       .then((res) => res.json())
@@ -104,13 +102,9 @@ export default function Header() {
       setIsDarkMode(false);
     }
 
-    // Load logo và menu lần đầu
     fetchSettings();
-
-    // Lắng nghe sự kiện "logoChanged" từ trang Admin để cập nhật ngay lập tức mà không cần F5
     window.addEventListener("logoChanged", fetchSettings);
 
-    // Fetch dữ liệu Navbar từ API
     fetch("/api/navbar")
       .then((res) => res.json())
       .then((data) => {
@@ -125,10 +119,6 @@ export default function Header() {
       window.removeEventListener("logoChanged", fetchSettings);
     };
   }, []);
-
-  const toggleLanguage = () => {
-    setLanguage((prev) => (prev === "EN" ? "VI" : "EN"));
-  };
 
   const toggleTheme = () => {
     const newMode = !isDarkMode;
@@ -150,6 +140,9 @@ export default function Header() {
     }));
   };
 
+  const defaultChildDesc =
+    language === "VI" ? "Khám phá chi tiết" : "Explore details";
+
   return (
     <>
       <header
@@ -161,7 +154,6 @@ export default function Header() {
       >
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
           <a href="#home" className="flex items-center">
-            {/* Sử dụng dữ liệu logo và kích thước tùy chỉnh từ cơ sở dữ liệu */}
             <img
               src={isDarkMode ? logoConfig.logo_dark : logoConfig.logo_light}
               alt="Logo"
@@ -176,7 +168,6 @@ export default function Header() {
             />
           </a>
 
-          {/* Desktop Menu */}
           <div className="flex items-center gap-6">
             <nav className="hidden items-center gap-7 md:flex">
               {navItems.map((item) => {
@@ -196,7 +187,6 @@ export default function Header() {
                       )}
                     </a>
 
-                    {/* Dropdown Desktop đã được thu nhỏ khung lại */}
                     {hasChildren && (
                       <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 hidden w-[320px] group-hover:block transition-all">
                         <div className="relative rounded-xl bg-neutral-100 dark:bg-[#121215] border border-neutral-300 dark:border-white/10 p-2.5 shadow-xl backdrop-blur-2xl">
@@ -213,7 +203,7 @@ export default function Header() {
                                   {child.title}
                                 </span>
                                 <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-                                  {child.desc || "Khám phá chi tiết"}
+                                  {child.desc || defaultChildDesc}
                                 </span>
                               </a>
                             ))}
@@ -226,7 +216,6 @@ export default function Header() {
               })}
             </nav>
 
-            {/* Quick buttons */}
             <div className="hidden items-center gap-3 md:flex border-l border-neutral-300 dark:border-white/10 pl-6">
               <button
                 onClick={toggleLanguage}
@@ -252,7 +241,6 @@ export default function Header() {
               </button>
             </div>
 
-            {/* Open Sidebar Menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="group p-2.5 bg-neutral-300 dark:bg-white/5 border border-neutral-400 dark:border-white/10 rounded-xl hover:bg-neutral-400/60 dark:hover:bg-white/10 transition-all cursor-pointer flex items-center justify-center shadow-xs"
@@ -267,7 +255,6 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Drawer Sidebar Menu (Menu phụ) */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 dark:bg-black/70 backdrop-blur-sm transition-opacity">
           <div className="w-full max-w-sm bg-neutral-100 dark:bg-[#141414] border-l border-neutral-300 dark:border-white/10 h-full p-8 flex flex-col shadow-2xl relative text-neutral-900 dark:text-white overflow-y-auto">
@@ -288,7 +275,6 @@ export default function Header() {
               </p>
             </div>
 
-            {/* Danh sách menu chính và phụ */}
             <div className="flex flex-col gap-4">
               <span className="text-[11px] font-bold tracking-wider text-neutral-500 dark:text-gray-500 uppercase">
                 {t.categories}
@@ -322,7 +308,6 @@ export default function Header() {
                       </a>
                     )}
 
-                    {/* Menu con trượt mở ra khi ấn */}
                     {hasChildren && isOpen && (
                       <div className="grid grid-cols-1 gap-1.5 pl-3 border-l border-neutral-300 dark:border-white/10 my-1">
                         {item.children?.map((child) => (
@@ -336,7 +321,7 @@ export default function Header() {
                               {child.title}
                             </span>
                             <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
-                              {child.desc || "Khám phá chi tiết"}
+                              {child.desc || defaultChildDesc}
                             </span>
                           </a>
                         ))}
@@ -346,7 +331,6 @@ export default function Header() {
                 );
               })}
 
-              {/* Phần tùy chọn Ngôn ngữ và Giao diện đặt ngay dưới phần danh mục cuối */}
               <div className="mt-4 pt-6 border-t border-neutral-300 dark:border-white/10 flex items-center justify-between">
                 <span className="text-xs font-bold text-neutral-500 dark:text-gray-400 uppercase">
                   {t.options}
