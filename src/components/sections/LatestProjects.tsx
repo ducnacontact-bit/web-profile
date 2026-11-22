@@ -95,29 +95,6 @@ async function translateProjectText(
   return text;
 }
 
-// Trên mobile (< 640px) ép về 1 ô gọn gàng để không vỡ grid, từ sm trở lên giữ span gốc của bạn
-function getMobileSafeSpan(span?: string): string {
-  const baseSpan = span || "col-span-1 row-span-1";
-  const smPrefixed = baseSpan
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((cls) => {
-      if (
-        cls.startsWith("sm:") ||
-        cls.startsWith("md:") ||
-        cls.startsWith("lg:")
-      ) {
-        return cls;
-      }
-      if (cls === "col-span-2" || cls === "row-span-2") {
-        return `sm:${cls}`;
-      }
-      return cls;
-    });
-
-  return `col-span-1 row-span-1 ${smPrefixed.join(" ")}`.trim();
-}
-
 export default function LatestProjects() {
   const { lang } = useLanguage();
   const t = uiText[lang];
@@ -243,7 +220,7 @@ export default function LatestProjects() {
         </div>
 
         {/* Thanh lọc danh mục (Filter Tabs) */}
-        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2.5 sm:gap-6 sm:gap-10 mb-10 sm:mb-16 text-[11px] sm:text-xs font-bold tracking-widest text-neutral-500 dark:text-gray-400">
+        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2.5 sm:gap-10 mb-10 sm:mb-16 text-[11px] sm:text-xs font-bold tracking-widest text-neutral-500 dark:text-gray-400">
           {dynamicCategoryKeys.map((catKey) => (
             <button
               key={catKey}
@@ -259,7 +236,7 @@ export default function LatestProjects() {
           ))}
         </div>
 
-        {/* Lưới dự án (Masonry / Grid nghệ thuật) */}
+        {/* Lưới dự án (Masonry / Grid nghệ thuật) - giữ nguyên project.span từ admin trên máy tính */}
         {translatedProjects.length === 0 ? (
           <div className="text-center py-20 text-neutral-500 text-sm">
             {t.emptyProjects}
@@ -278,9 +255,9 @@ export default function LatestProjects() {
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 key={project.id}
                 onClick={() => setSelectedProjectId(project.id)}
-                className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group ${getMobileSafeSpan(
-                  project.span,
-                )}`}
+                className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group max-sm:!col-span-1 ${
+                  project.span || "col-span-1 row-span-1"
+                }`}
               >
                 <img
                   src={project.image}
@@ -310,7 +287,7 @@ export default function LatestProjects() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto bg-neutral-100 dark:bg-[#1a1a1a] border border-neutral-300 dark:border-white/10 overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-2 text-neutral-900 dark:text-white transition-colors duration-300 rounded-2xl"
+              className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto bg-neutral-100 dark:bg-[#1a1a1a] border border-neutral-300 dark:border-white/10 shadow-2xl grid grid-cols-1 md:grid-cols-2 text-neutral-900 dark:text-white transition-colors duration-300 rounded-2xl"
             >
               <button
                 onClick={() => setSelectedProjectId(null)}
