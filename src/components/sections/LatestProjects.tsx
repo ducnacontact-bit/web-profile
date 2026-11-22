@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
@@ -13,14 +13,6 @@ interface ProjectItem {
   span: string;
   desc: string;
 }
-
-const CATEGORY_KEYS = [
-  "ALL WORK",
-  "WEB DESIGN",
-  "GRAPHIC",
-  "PRINT",
-  "ILLUSTRATION",
-] as const;
 
 const uiText = {
   VI: {
@@ -147,10 +139,27 @@ export default function LatestProjects() {
     };
   }, [projects, lang, t.categories]);
 
+  const dynamicCategoryKeys = useMemo(() => {
+    const categoriesFromData = Array.from(
+      new Set(
+        projects
+          .map((p) => p.category?.trim())
+          .filter((cat): cat is string => Boolean(cat)),
+      ),
+    );
+    return ["ALL WORK", ...categoriesFromData];
+  }, [projects]);
+
+  useEffect(() => {
+    if (!dynamicCategoryKeys.includes(activeFilter)) {
+      setActiveFilter("ALL WORK");
+    }
+  }, [dynamicCategoryKeys, activeFilter]);
+
   const filteredProjectIds = new Set(
     (activeFilter === "ALL WORK"
       ? projects
-      : projects.filter((p) => p.category === activeFilter)
+      : projects.filter((p) => p.category?.trim() === activeFilter)
     ).map((p) => p.id),
   );
 
@@ -186,9 +195,9 @@ export default function LatestProjects() {
           </div>
         </div>
 
-        {/* Thanh lọc danh mục (Filter Tabs) */}
+        {/* Thanh lọc danh mục (Filter Tabs) sinh động theo dữ liệu projects */}
         <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2.5 sm:gap-8 lg:gap-10 mb-10 sm:mb-14 text-[11px] sm:text-xs font-bold tracking-wider sm:tracking-widest text-neutral-500 dark:text-gray-400">
-          {CATEGORY_KEYS.map((catKey) => (
+          {dynamicCategoryKeys.map((catKey) => (
             <button
               key={catKey}
               onClick={() => setActiveFilter(catKey)}
