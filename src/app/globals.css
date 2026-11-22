@@ -15,10 +15,14 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   /* Sử dụng màu nền thích ứng theo chế độ sáng/tối */
   background-color: var(--bg-color, #0b0b0b);
   color: var(--text-color, #ffffff);

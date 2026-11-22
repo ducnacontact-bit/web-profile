@@ -30,8 +30,8 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative bg-[#0d0d0d] border-t border-white/10 px-6 py-12 lg:px-20 text-white">
-      <div className="mx-auto w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="relative bg-[#0d0d0d] border-t border-white/10 px-4 sm:px-6 py-8 sm:py-12 lg:px-20 text-white">
+      <div className="mx-auto w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
         {/* Bản quyền thương hiệu */}
         <div className="text-center md:text-left">
           <p className="text-xs sm:text-sm text-gray-400">
@@ -42,9 +42,10 @@ export default function Footer() {
         </div>
 
         {/* Các liên kết mạng xã hội / website */}
-        <div className="flex items-center gap-4 text-gray-400">
+        <div className="flex items-center gap-3 sm:gap-4 text-gray-400 shrink-0">
           <a
             href="#facebook"
+            aria-label={t.websiteTitle}
             className="w-9 h-9 rounded-full bg-[#161616] border border-white/5 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors"
             title={t.websiteTitle}
           >
@@ -52,6 +53,7 @@ export default function Footer() {
           </a>
           <a
             href="#share"
+            aria-label={t.shareTitle}
             className="w-9 h-9 rounded-full bg-[#161616] border border-white/5 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors"
             title={t.shareTitle}
           >
@@ -59,6 +61,7 @@ export default function Footer() {
           </a>
           <a
             href="#chat"
+            aria-label={t.messageTitle}
             className="w-9 h-9 rounded-full bg-[#161616] border border-white/5 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors"
             title={t.messageTitle}
           >
@@ -67,9 +70,10 @@ export default function Footer() {
         </div>
 
         {/* Nút cuộn lên đầu trang */}
-        <div>
+        <div className="shrink-0">
           <button
             onClick={scrollToTop}
+            aria-label={t.scrollTopTitle}
             className="w-10 h-10 rounded-full bg-[#161616] border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-colors cursor-pointer shadow-md"
             title={t.scrollTopTitle}
           >

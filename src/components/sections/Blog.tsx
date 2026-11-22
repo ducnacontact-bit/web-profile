@@ -119,20 +119,20 @@ export default function Blog() {
     return (
       <section
         id="blog"
-        className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#111] dark:text-white px-6 py-24 lg:px-24 transition-colors duration-300"
+        className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#111] dark:text-white px-4 sm:px-6 py-16 sm:py-24 lg:px-24 transition-colors duration-300"
       >
         <div className="mx-auto w-full max-w-6xl text-center">
-          <div className="flex justify-center mb-16">
+          <div className="flex justify-center mb-10 sm:mb-14">
             <div className="relative inline-block text-center">
               <div
-                className="absolute -left-6 -top-3 h-14 w-40 z-0 text-neutral-900 dark:text-white opacity-20 dark:opacity-40 pointer-events-none"
+                className="absolute -left-4 sm:-left-6 -top-2 sm:-top-3 h-12 sm:h-14 w-32 sm:w-40 z-0 text-neutral-900 dark:text-white opacity-20 dark:opacity-40 pointer-events-none"
                 style={{
                   backgroundImage:
                     "radial-gradient(currentColor 1.2px, transparent 1.2px)",
                   backgroundSize: "6px 6px",
                 }}
               />
-              <h2 className="relative z-10 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl bg-neutral-200 dark:bg-[#1a1a1a] px-8 py-2 border border-neutral-300 dark:border-white/5 shadow-md transition-colors duration-300">
+              <h2 className="relative z-10 text-xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white bg-neutral-200 dark:bg-[#1a1a1a] px-6 sm:px-8 py-2 border border-neutral-300 dark:border-white/5 shadow-md transition-colors duration-300 rounded-xl">
                 {t.sectionTitle}
               </h2>
             </div>
@@ -149,37 +149,37 @@ export default function Blog() {
   return (
     <section
       id="blog"
-      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#111] dark:text-white px-6 py-24 lg:px-24 transition-colors duration-300"
+      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#111] dark:text-white px-4 sm:px-6 py-16 sm:py-24 lg:px-24 transition-colors duration-300"
     >
       <div className="mx-auto w-full max-w-6xl">
-        <div className="flex justify-center mb-16">
+        <div className="flex justify-center mb-10 sm:mb-14">
           <div className="relative inline-block text-center">
             <div
-              className="absolute -left-6 -top-3 h-14 w-40 z-0 text-neutral-900 dark:text-white opacity-20 dark:opacity-40 pointer-events-none"
+              className="absolute -left-4 sm:-left-6 -top-2 sm:-top-3 h-12 sm:h-14 w-32 sm:w-40 z-0 text-neutral-900 dark:text-white opacity-20 dark:opacity-40 pointer-events-none"
               style={{
                 backgroundImage:
                   "radial-gradient(currentColor 1.2px, transparent 1.2px)",
                 backgroundSize: "6px 6px",
               }}
             />
-            <h2 className="relative z-10 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl bg-neutral-200 dark:bg-[#1a1a1a] px-8 py-2 border border-neutral-300 dark:border-white/5 shadow-md transition-colors duration-300">
+            <h2 className="relative z-10 text-xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white bg-neutral-200 dark:bg-[#1a1a1a] px-6 sm:px-8 py-2 border border-neutral-300 dark:border-white/5 shadow-md transition-colors duration-300 rounded-xl">
               {t.sectionTitle}
             </h2>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          <div className="lg:col-span-5 bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 flex flex-col justify-between group hover:border-neutral-400 dark:hover:border-white/20 transition-colors duration-300 cursor-pointer shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+          <div className="lg:col-span-5 bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 flex flex-col justify-between group hover:border-neutral-400 dark:hover:border-white/20 transition-colors duration-300 cursor-pointer shadow-sm rounded-xl overflow-hidden">
             <div>
-              <div className="w-full h-64 overflow-hidden relative">
+              <div className="w-full h-48 sm:h-64 overflow-hidden relative">
                 <img
                   src={mainPost.image}
                   alt={mainPost.title}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
-              <div className="p-6">
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-3 leading-snug">
+              <div className="p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white mb-2 sm:mb-3 leading-snug">
                   {mainPost.title}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-600 dark:text-gray-400 leading-relaxed">
@@ -188,9 +188,9 @@ export default function Blog() {
               </div>
             </div>
 
-            <div className="p-6 pt-0">
-              <div className="flex items-center justify-between pt-4 border-t border-neutral-300 dark:border-white/5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white hover:text-neutral-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1.5 cursor-pointer">
+            <div className="p-4 sm:p-6 pt-0">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 sm:pt-4 border-t border-neutral-300 dark:border-white/5">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white hover:text-neutral-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                   {t.readMore} <ExternalLink className="w-3 h-3" />
                 </span>
                 <div className="flex items-center gap-3 text-neutral-500 dark:text-gray-400">
@@ -217,35 +217,35 @@ export default function Blog() {
             </div>
           </div>
 
-          <div className="lg:col-span-7 flex flex-col justify-between gap-6">
+          <div className="lg:col-span-7 flex flex-col justify-between gap-4 sm:gap-6">
             {subPosts.length === 0 ? (
-              <div className="bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 p-6 flex items-center justify-center text-xs text-neutral-500">
+              <div className="bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 p-6 flex items-center justify-center text-xs text-neutral-500 rounded-xl">
                 {t.noSubPosts}
               </div>
             ) : (
               subPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 flex flex-col sm:flex-row group hover:border-neutral-400 dark:hover:border-white/20 transition-colors duration-300 overflow-hidden cursor-pointer flex-1 shadow-sm"
+                  className="bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 flex flex-col sm:flex-row group hover:border-neutral-400 dark:hover:border-white/20 transition-colors duration-300 overflow-hidden cursor-pointer flex-1 shadow-sm rounded-xl"
                 >
-                  <div className="sm:w-2/5 h-48 sm:h-auto overflow-hidden relative flex-shrink-0">
+                  <div className="sm:w-2/5 h-44 sm:h-auto overflow-hidden relative flex-shrink-0">
                     <img
                       src={post.image}
                       alt={post.title}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
-                  <div className="p-5 sm:p-6 flex flex-col justify-between flex-grow">
+                  <div className="p-4 sm:p-6 flex flex-col justify-between flex-grow min-w-0">
                     <div>
-                      <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-2 leading-snug">
+                      <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white mb-1.5 sm:mb-2 leading-snug">
                         {post.title}
                       </h3>
-                      <p className="text-xs text-neutral-600 dark:text-gray-400 leading-relaxed mb-4 line-clamp-2">
+                      <p className="text-xs text-neutral-600 dark:text-gray-400 leading-relaxed mb-3 sm:mb-4 line-clamp-2">
                         {post.excerpt}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-neutral-300 dark:border-white/5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white hover:text-neutral-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-neutral-300 dark:border-white/5">
+                      <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white hover:text-neutral-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                         {t.readMore} <ExternalLink className="w-3 h-3" />
                       </span>
                       <div className="flex items-center gap-2.5 text-neutral-500 dark:text-gray-400">

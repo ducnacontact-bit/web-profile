@@ -168,9 +168,9 @@ export default function About() {
   return (
     <section
       id="about"
-      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white text-neutral-900 dark:bg-[#111] dark:text-white px-6 py-20 lg:px-24 transition-colors duration-300"
+      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white text-neutral-900 dark:bg-[#111] dark:text-white px-4 sm:px-6 py-16 sm:py-20 lg:px-24 transition-colors duration-300"
     >
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 sm:gap-12 lg:grid-cols-12 lg:gap-16">
         {/* Cột trái: Khung ảnh cá nhân */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -188,7 +188,7 @@ export default function About() {
             }}
           />
 
-          <div className="relative z-10 w-full max-w-sm bg-neutral-100 dark:bg-[#1a1a1a] p-3 border border-black/5 dark:border-white/5 shadow-2xl transition-colors duration-300">
+          <div className="relative z-10 w-full max-w-[270px] sm:max-w-sm bg-neutral-100 dark:bg-[#1a1a1a] p-2.5 sm:p-3 border border-black/5 dark:border-white/5 shadow-2xl transition-colors duration-300">
             <div className="aspect-[4/5] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-900">
               <img
                 src={translatedAbout.image || "/shinn.jpg"}
@@ -209,19 +209,19 @@ export default function About() {
         >
           <div className="relative inline-block">
             <div
-              className="absolute -left-3 -top-2.5 h-12 w-28 z-0 text-neutral-900 dark:text-white opacity-20 pointer-events-none"
+              className="absolute -left-2 sm:-left-3 -top-2 sm:-top-2.5 h-10 sm:h-12 w-24 sm:w-28 z-0 text-neutral-900 dark:text-white opacity-20 pointer-events-none"
               style={{
                 backgroundImage:
                   "radial-gradient(currentColor 1.2px, transparent 1.2px)",
                 backgroundSize: "6px 6px",
               }}
             />
-            <h2 className="relative z-10 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">
+            <h2 className="relative z-10 text-2xl sm:text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">
               {t.aboutTitle}
             </h2>
           </div>
 
-          <div className="mt-6 space-y-4 text-sm leading-relaxed text-neutral-600 dark:text-gray-400 sm:text-base whitespace-pre-line">
+          <div className="mt-5 sm:mt-6 space-y-3.5 sm:space-y-4 text-xs sm:text-base leading-relaxed text-neutral-600 dark:text-gray-400 whitespace-pre-line">
             {isLoadingAbout ? (
               <p>{t.loading}</p>
             ) : (
@@ -232,10 +232,10 @@ export default function About() {
             )}
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
             <a
               href={translatedAbout.hireMeUrl || "#contact"}
-              className="inline-flex items-center justify-center bg-neutral-900 text-white dark:bg-white dark:text-black px-8 py-3.5 text-xs font-bold uppercase tracking-widest transition-all duration-300 hover:bg-neutral-800 dark:hover:bg-neutral-200"
+              className="w-full sm:w-auto inline-flex items-center justify-center bg-neutral-900 text-white dark:bg-white dark:text-black px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-widest transition-all duration-300 hover:bg-neutral-800 dark:hover:bg-neutral-200"
             >
               {t.hireMe}
             </a>
@@ -244,7 +244,7 @@ export default function About() {
               href={translatedAbout.cvUrl || "/cv.pdf"}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center border border-neutral-400 dark:border-white/40 px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-neutral-900 dark:text-white transition-all duration-300 hover:border-neutral-900 dark:hover:border-white hover:bg-black/5 dark:hover:bg-white/10"
+              className="w-full sm:w-auto inline-flex items-center justify-center border border-neutral-400 dark:border-white/40 px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-widest text-neutral-900 dark:text-white transition-all duration-300 hover:border-neutral-900 dark:hover:border-white hover:bg-black/5 dark:hover:bg-white/10"
             >
               {t.downloadCv}
             </a>
@@ -253,24 +253,24 @@ export default function About() {
       </div>
 
       {/* Phần My Skills động từ DB */}
-      <div className="mx-auto mt-24 w-full max-w-6xl">
-        <div className="flex justify-center mb-16">
+      <div className="mx-auto mt-14 sm:mt-20 lg:mt-24 w-full max-w-6xl">
+        <div className="flex justify-center mb-10 sm:mb-14">
           <div className="relative inline-block text-center">
             <div
-              className="absolute -left-3 -top-2.5 h-12 w-32 z-0 text-neutral-900 dark:text-white opacity-20 pointer-events-none"
+              className="absolute -left-2 sm:-left-3 -top-2 sm:-top-2.5 h-10 sm:h-12 w-28 sm:w-32 z-0 text-neutral-900 dark:text-white opacity-20 pointer-events-none"
               style={{
                 backgroundImage:
                   "radial-gradient(currentColor 1.2px, transparent 1.2px)",
                 backgroundSize: "6px 6px",
               }}
             />
-            <h3 className="relative z-10 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
+            <h3 className="relative z-10 text-xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
               {t.skillsTitle}
             </h3>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-x-16 gap-y-10 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 lg:gap-x-16 gap-y-6 sm:gap-y-8 md:grid-cols-2">
           {translatedSkills.map((skill, index) => (
             <motion.div
               key={skill.id}
@@ -280,9 +280,9 @@ export default function About() {
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="flex flex-col space-y-2"
             >
-              <div className="flex justify-between text-xs font-semibold tracking-wider text-neutral-700 dark:text-gray-300">
-                <span>{skill.name}</span>
-                <span>{skill.percentage}%</span>
+              <div className="flex justify-between gap-2 text-xs font-semibold tracking-wider text-neutral-700 dark:text-gray-300">
+                <span className="truncate">{skill.name}</span>
+                <span className="shrink-0">{skill.percentage}%</span>
               </div>
               <div className="relative h-[2px] w-full bg-neutral-200 dark:bg-neutral-800">
                 <motion.div

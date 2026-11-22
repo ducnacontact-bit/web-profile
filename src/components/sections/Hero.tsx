@@ -290,7 +290,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-200 text-neutral-900 dark:bg-[#111] dark:text-white transition-colors duration-300"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-200 text-neutral-900 dark:bg-[#111] dark:text-white pt-16 pb-16 sm:pt-20 sm:pb-12 transition-colors duration-300"
     >
       <div
         className={`absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-500 ${
@@ -301,23 +301,23 @@ export default function Hero() {
         }}
       />
 
-      <div className="relative z-10 w-full px-4 text-center">
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 sm:px-6 text-center">
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-lg font-medium text-neutral-700 dark:text-gray-300 sm:text-xl md:text-2xl"
+          className="text-base sm:text-xl md:text-2xl font-medium text-neutral-700 dark:text-gray-300"
         >
           {displayGreeting || t.defaultGreeting}
         </motion.p>
 
-        <div className="my-2 flex flex-wrap items-center justify-center">
-          <h1 className="text-xl font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-3xl md:text-5xl lg:text-6xl">
+        <div className="my-2 sm:my-3 flex flex-wrap items-center justify-center">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-900 dark:text-white leading-tight">
             I&apos;m{" "}
             <span className="text-neutral-900 dark:text-white">
               {currentText}
             </span>
-            <span className="ml-1 inline-block w-[3px] h-[0.8em] bg-neutral-900 dark:bg-white animate-pulse align-middle" />
+            <span className="ml-1 inline-block w-[2px] sm:w-[3px] h-[0.8em] bg-neutral-900 dark:bg-white animate-pulse align-middle" />
           </h1>
         </div>
 
@@ -325,10 +325,10 @@ export default function Hero() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold tracking-widest text-neutral-700 dark:text-gray-400 sm:text-sm md:text-base uppercase"
+          className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:gap-3 text-[11px] sm:text-sm md:text-base font-semibold tracking-wider sm:tracking-widest text-neutral-700 dark:text-gray-400 uppercase"
         >
           {displayRoles.map((role, idx) => (
-            <span key={idx} className="flex items-center gap-3">
+            <span key={idx} className="flex items-center gap-2 sm:gap-3">
               {idx > 0 && (
                 <span className="text-[#d99b00] dark:text-[#ffb400]">◆</span>
               )}
@@ -341,7 +341,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="mx-auto mt-6 max-w-xl px-6 text-sm leading-7 text-neutral-700 dark:text-gray-400 sm:text-base font-medium whitespace-pre-line"
+          className="mx-auto mt-4 sm:mt-6 max-w-md sm:max-w-xl px-2 sm:px-6 text-xs sm:text-base leading-6 sm:leading-7 text-neutral-700 dark:text-gray-400 font-medium whitespace-pre-line"
         >
           {displayDescription}
         </motion.p>
@@ -350,7 +350,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-12 flex justify-center items-center gap-4 flex-wrap"
+          className="mt-8 sm:mt-12 flex justify-center items-center gap-3 sm:gap-4 flex-wrap"
         >
           {(() => {
             const socialLinks = Array.isArray(heroData.socials)
@@ -369,11 +369,11 @@ export default function Hero() {
                     href={social.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`group flex h-12 w-12 items-center justify-center rounded-full border border-neutral-400/50 dark:border-white/20 text-neutral-800 dark:text-white bg-white/70 dark:bg-white/5 backdrop-blur-md transition-all duration-300 ${hoverBg} hover:text-white hover:-translate-y-1 shadow-sm`}
+                    className={`group flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-neutral-400/50 dark:border-white/20 text-neutral-800 dark:text-white bg-white/70 dark:bg-white/5 backdrop-blur-md transition-all duration-300 ${hoverBg} hover:text-white hover:-translate-y-1 shadow-sm`}
                     title={social.platform}
                   >
                     <svg
-                      className="w-5 h-5 fill-current transition-colors"
+                      className="w-4 h-4 sm:w-5 sm:h-5 fill-current transition-colors"
                       viewBox="0 0 24 24"
                     >
                       <path d={svgPath} />
@@ -393,10 +393,10 @@ export default function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 hidden sm:block"
+        className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-10 flex"
       >
         <div className="flex flex-col items-center gap-1 text-neutral-600 dark:text-gray-500">
-          <span className="text-[10px] uppercase tracking-[0.3em]">
+          <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.3em]">
             {t.scroll}
           </span>
           <motion.div
