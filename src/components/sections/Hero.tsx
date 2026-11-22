@@ -298,7 +298,7 @@ export default function Hero() {
       className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-200 text-neutral-900 dark:bg-[#111] dark:text-white pt-16 pb-16 sm:pt-20 sm:pb-12 transition-colors duration-300"
     >
       <div
-        className={`absolute inset-0 z-0 bg-contain sm:bg-cover bg-no-repeat bg-center transition-opacity duration-500 ${
+        className={`absolute inset-0 z-0 bg-cover bg-[62%_center] sm:bg-center bg-no-repeat transition-opacity duration-500 ${
           isDarkMode ? "opacity-30" : "opacity-75"
         }`}
         style={{
