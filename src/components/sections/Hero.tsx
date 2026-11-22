@@ -6,18 +6,18 @@ import { motion } from "framer-motion";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
 import { translateText, translateList } from "@/lib/translator";
 
+interface HeroSocial {
+  platform: string;
+  url: string;
+}
+
 interface HeroData {
   roles?: string[] | string;
   greeting?: string;
   description?: string;
   darkBgUrl?: string;
   lightBgUrl?: string;
-  socials?:
-    | {
-        platform: string;
-        url: string;
-      }[]
-    | string;
+  socials?: HeroSocial[] | string;
 }
 
 interface HeroDisplayState {
@@ -78,7 +78,7 @@ export default function Hero() {
       .then((res) => res.json())
       .then((data) => {
         if (data && !data.error) {
-          let parsedSocials = [];
+          let parsedSocials: HeroSocial[] = [];
           try {
             if (data.socials) {
               parsedSocials =
@@ -292,6 +292,10 @@ export default function Hero() {
       : heroData.lightBgUrl
     : "";
 
+  const socialLinks = Array.isArray(heroData.socials)
+    ? heroData.socials.filter((s) => s.url && s.url.trim() !== "")
+    : [];
+
   return (
     <section
       id="home"
@@ -311,18 +315,18 @@ export default function Hero() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-base sm:text-xl md:text-2xl font-medium text-neutral-700 dark:text-gray-300"
+          className="text-base sm:text-xl md:text-2xl font-semibold text-neutral-900 dark:text-gray-300"
         >
           {displayGreeting || t.defaultGreeting}
         </motion.p>
 
         <div className="my-2 sm:my-3 flex flex-wrap items-center justify-center">
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-900 dark:text-white leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-950 dark:text-white leading-tight">
             I&apos;m{" "}
-            <span className="text-neutral-900 dark:text-white">
+            <span className="text-neutral-950 dark:text-white">
               {currentText}
             </span>
-            <span className="ml-1 inline-block w-[2px] sm:w-[3px] h-[0.8em] bg-neutral-900 dark:bg-white animate-pulse align-middle" />
+            <span className="ml-1 inline-block w-[2px] sm:w-[3px] h-[0.8em] bg-neutral-950 dark:bg-white animate-pulse align-middle" />
           </h1>
         </div>
 
@@ -330,12 +334,12 @@ export default function Hero() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:gap-3 text-[11px] sm:text-sm md:text-base font-semibold tracking-wider sm:tracking-widest text-neutral-700 dark:text-gray-400 uppercase"
+          className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:gap-3 text-[11px] sm:text-sm md:text-base font-bold tracking-wider sm:tracking-widest text-neutral-900 dark:text-gray-300 uppercase"
         >
           {displayRoles.map((role, idx) => (
             <span key={idx} className="flex items-center gap-2 sm:gap-3">
               {idx > 0 && (
-                <span className="text-[#d99b00] dark:text-[#ffb400]">◆</span>
+                <span className="text-[#b37d00] dark:text-[#ffb400]">◆</span>
               )}
               {role}
             </span>
@@ -346,7 +350,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="mx-auto mt-4 sm:mt-6 max-w-md sm:max-w-xl px-2 sm:px-6 text-xs sm:text-base leading-6 sm:leading-7 text-neutral-700 dark:text-gray-400 font-medium whitespace-pre-line"
+          className="mx-auto mt-4 sm:mt-6 max-w-md sm:max-w-xl px-2 sm:px-6 text-xs sm:text-base leading-6 sm:leading-7 text-neutral-900 dark:text-gray-300 font-medium whitespace-pre-line"
         >
           {displayDescription}
         </motion.p>
@@ -357,39 +361,27 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="mt-8 sm:mt-12 flex justify-center items-center gap-3 sm:gap-4 flex-wrap"
         >
-          {(() => {
-            const socialLinks = Array.isArray(heroData.socials)
-              ? heroData.socials.filter((s) => s.url && s.url.trim() !== "")
-              : [];
+          {socialLinks.map((social, index) => {
+            const { svgPath, hoverBg } = getSocialIconAndColor(social.platform);
 
-            if (socialLinks.length > 0) {
-              return socialLinks.map((social: any, index: number) => {
-                const { svgPath, hoverBg } = getSocialIconAndColor(
-                  social.platform,
-                );
-
-                return (
-                  <a
-                    key={index}
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`group flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-neutral-400/50 dark:border-white/20 text-neutral-800 dark:text-white bg-white/70 dark:bg-white/5 backdrop-blur-md transition-all duration-300 ${hoverBg} hover:text-white hover:-translate-y-1 shadow-sm`}
-                    title={social.platform}
-                  >
-                    <svg
-                      className="w-4 h-4 sm:w-5 sm:h-5 fill-current transition-colors"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d={svgPath} />
-                    </svg>
-                  </a>
-                );
-              });
-            }
-
-            return null;
-          })()}
+            return (
+              <a
+                key={index}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`group flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-neutral-900/25 dark:border-white/20 text-neutral-950 dark:text-white bg-white/85 dark:bg-white/5 backdrop-blur-md transition-all duration-300 ${hoverBg} hover:text-white hover:-translate-y-1 shadow-sm`}
+                title={social.platform}
+              >
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5 fill-current transition-colors"
+                  viewBox="0 0 24 24"
+                >
+                  <path d={svgPath} />
+                </svg>
+              </a>
+            );
+          })}
         </motion.div>
       </div>
 
@@ -400,7 +392,7 @@ export default function Hero() {
         transition={{ delay: 1 }}
         className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-10 flex"
       >
-        <div className="flex flex-col items-center gap-1 text-neutral-600 dark:text-gray-500">
+        <div className="flex flex-col items-center gap-1 text-neutral-900 dark:text-gray-400 font-semibold">
           <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.3em]">
             {t.scroll}
           </span>
