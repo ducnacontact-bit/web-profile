@@ -79,7 +79,7 @@ export default function About() {
   const t = uiText[lang];
 
   const [aboutData, setAboutData] = useState<AboutData>({
-    image: "/shinn.jpg",
+    image: "",
     paragraph1: "",
     paragraph2: "",
     hireMeUrl: "#contact",
@@ -87,7 +87,7 @@ export default function About() {
   });
 
   const [translatedAbout, setTranslatedAbout] = useState<AboutData>({
-    image: "/shinn.jpg",
+    image: "",
     paragraph1: "",
     paragraph2: "",
     hireMeUrl: "#contact",
@@ -99,24 +99,49 @@ export default function About() {
   const [isLoadingAbout, setIsLoadingAbout] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     fetch("/api/about", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
+        if (!active) return;
         if (data && !data.error) {
-          setAboutData(data);
+          setAboutData({
+            ...data,
+            image: data.image?.trim() ? data.image.trim() : "/shinn.jpg",
+          });
+        } else {
+          setAboutData((prev) => ({
+            ...prev,
+            image: prev.image || "/shinn.jpg",
+          }));
         }
       })
-      .catch((err) => console.error(t.loadAboutError, err))
-      .finally(() => setIsLoadingAbout(false));
+      .catch((err) => {
+        console.error(t.loadAboutError, err);
+        if (active) {
+          setAboutData((prev) => ({
+            ...prev,
+            image: prev.image || "/shinn.jpg",
+          }));
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoadingAbout(false);
+      });
 
     fetch("/api/skills", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
+        if (active && Array.isArray(data)) {
           setSkills(data);
         }
       })
       .catch((err) => console.error(t.loadSkillsError, err));
+
+    return () => {
+      active = false;
+    };
   }, [t.loadAboutError, t.loadSkillsError]);
 
   useEffect(() => {
@@ -165,6 +190,8 @@ export default function About() {
     };
   }, [aboutData, skills, lang]);
 
+  const avatarSrc = translatedAbout.image || aboutData.image;
+
   return (
     <section
       id="about"
@@ -190,11 +217,15 @@ export default function About() {
 
           <div className="relative z-10 w-full max-w-[270px] sm:max-w-sm bg-neutral-100 dark:bg-[#1a1a1a] p-2.5 sm:p-3 border border-black/5 dark:border-white/5 shadow-2xl transition-colors duration-300">
             <div className="aspect-[4/5] w-full overflow-hidden bg-neutral-200 dark:bg-neutral-900">
-              <img
-                src={translatedAbout.image || "/shinn.jpg"}
-                alt="Đức Nguyễn"
-                className="h-full w-full object-cover grayscale contrast-125 transition-all duration-500 hover:grayscale-0"
-              />
+              {isLoadingAbout || !avatarSrc ? (
+                <div className="h-full w-full animate-pulse bg-neutral-300/80 dark:bg-neutral-800/80" />
+              ) : (
+                <img
+                  src={avatarSrc}
+                  alt="Đức Nguyễn"
+                  className="h-full w-full object-cover grayscale contrast-125 transition-all duration-500 hover:grayscale-0"
+                />
+              )}
             </div>
           </div>
         </motion.div>
