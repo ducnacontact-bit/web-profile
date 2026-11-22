@@ -272,13 +272,15 @@ export default function Header() {
               src={isDarkMode ? logoConfig.logo_dark : logoConfig.logo_light}
               alt="Logo"
               style={{
-                height: `${logoConfig.logo_height}px`,
+                height: logoConfig.logo_height
+                  ? `${logoConfig.logo_height}px`
+                  : undefined,
                 width:
-                  logoConfig.logo_width === "auto"
+                  !logoConfig.logo_width || logoConfig.logo_width === "auto"
                     ? "auto"
                     : `${logoConfig.logo_width}px`,
               }}
-              className="max-h-9 sm:max-h-11 max-w-[130px] sm:max-w-[180px] object-contain transition-all duration-300"
+              className="object-contain transition-all duration-300"
             />
           </a>
 
