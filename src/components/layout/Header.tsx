@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateText, translateList } from "@/lib/translator";
 
 const translations = {
   EN: {
@@ -73,9 +74,7 @@ interface NavbarItem {
   children?: NavbarChild[];
 }
 
-const navTranslationCache = new Map<string, string>();
-
-async function translateNavText(
+async function translateNavField(
   text: string,
   targetLang: Lang,
 ): Promise<string> {
@@ -88,31 +87,7 @@ async function translateNavText(
     return dictHit[targetLang];
   }
 
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (navTranslationCache.has(cacheKey)) {
-    return navTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const translated =
-        data?.translatedText ?? data?.translated ?? data?.text ?? data?.result;
-      if (typeof translated === "string" && translated.trim()) {
-        navTranslationCache.set(cacheKey, translated.trim());
-        return translated.trim();
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có /api/translate
-  }
-
-  return raw;
+  return translateText(trimmed, targetLang);
 }
 
 export default function Header() {
@@ -120,9 +95,13 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavbarItem[]>([]);
-  const [translatedNavItems, setTranslatedNavItems] = useState<NavbarItem[]>(
-    [],
-  );
+  const [translatedNavState, setTranslatedNavState] = useState<{
+    lang: Lang | null;
+    items: NavbarItem[];
+  }>({
+    lang: null,
+    items: [],
+  });
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   const [logoConfig, setLogoConfig] = useState({
@@ -194,23 +173,28 @@ export default function Header() {
 
     async function syncNavLanguage() {
       if (navItems.length === 0) {
-        if (active) setTranslatedNavItems([]);
+        if (active) setTranslatedNavState({ lang: language, items: [] });
         return;
       }
 
-      const nextItems = await Promise.all(
-        navItems.map(async (item) => {
-          const translatedTitle = await translateNavText(item.title, language);
+      const nextItems = await translateList(
+        navItems,
+        language,
+        async (item, translate) => {
+          const translatedTitle = await translateNavField(item.title, language);
           const translatedChildren =
             item.children && item.children.length > 0
-              ? await Promise.all(
-                  item.children.map(async (child) => ({
+              ? await translateList(
+                  item.children,
+                  language,
+                  async (child) => ({
                     ...child,
-                    title: await translateNavText(child.title, language),
+                    title: await translateNavField(child.title, language),
                     desc: child.desc
-                      ? await translateNavText(child.desc, language)
+                      ? await translate(child.desc)
                       : child.desc,
-                  })),
+                  }),
+                  2,
                 )
               : item.children;
 
@@ -219,11 +203,12 @@ export default function Header() {
             title: translatedTitle,
             children: translatedChildren,
           };
-        }),
+        },
+        2,
       );
 
       if (active) {
-        setTranslatedNavItems(nextItems);
+        setTranslatedNavState({ lang: language, items: nextItems });
       }
     }
 
@@ -233,6 +218,11 @@ export default function Header() {
       active = false;
     };
   }, [navItems, language]);
+
+  const displayNavItems =
+    translatedNavState.lang === language && translatedNavState.items.length > 0
+      ? translatedNavState.items
+      : navItems;
 
   const toggleTheme = () => {
     const newMode = !isDarkMode;
@@ -286,19 +276,19 @@ export default function Header() {
 
           <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 shrink-0">
             <nav className="hidden items-center gap-5 lg:gap-7 md:flex">
-              {translatedNavItems.map((item) => {
+              {displayNavItems.map((item) => {
                 const hasChildren = item.children && item.children.length > 0;
                 return (
                   <div key={item.id} className="relative group py-2">
                     <a
                       href={item.url}
-                      className="flex items-center whitespace-nowrap text-xs lg:text-sm font-semibold text-neutral-700 dark:text-gray-300 hover:text-neutral-950 dark:hover:text-white transition-colors duration-300"
+                      className="flex items-center whitespace-nowrap text-xs lg:text-sm font-semibold text-neutral-900 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors duration-300"
                     >
                       <span>{item.title}</span>
                       {hasChildren && (
                         <ChevronDown
                           size={14}
-                          className="ml-1.5 transition-transform duration-300 group-hover:rotate-180 text-neutral-400 shrink-0"
+                          className="ml-1.5 transition-transform duration-300 group-hover:rotate-180 text-neutral-700 dark:text-neutral-400 shrink-0"
                         />
                       )}
                     </a>
@@ -318,7 +308,7 @@ export default function Header() {
                                 <span className="text-xs font-semibold text-neutral-900 dark:text-white group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors line-clamp-1">
                                   {child.title}
                                 </span>
-                                <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                                <span className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-1">
                                   {child.desc || defaultChildDesc}
                                 </span>
                               </a>
@@ -387,16 +377,16 @@ export default function Header() {
               <h3 className="text-base sm:text-lg font-bold tracking-wide mb-1">
                 {t.settingsTitle}
               </h3>
-              <p className="text-xs text-neutral-500 dark:text-gray-400">
+              <p className="text-xs text-neutral-600 dark:text-gray-400">
                 {t.settingsDesc}
               </p>
             </div>
 
             <div className="flex flex-col gap-3.5 sm:gap-4">
-              <span className="text-[11px] font-bold tracking-wider text-neutral-500 dark:text-gray-500 uppercase">
+              <span className="text-[11px] font-bold tracking-wider text-neutral-600 dark:text-gray-500 uppercase">
                 {t.categories}
               </span>
-              {translatedNavItems.map((item) => {
+              {displayNavItems.map((item) => {
                 const hasChildren = item.children && item.children.length > 0;
                 const isOpen = openMobileMenus[item.id];
 
@@ -405,12 +395,12 @@ export default function Header() {
                     {hasChildren ? (
                       <button
                         onClick={() => toggleMobileSubmenu(item.id)}
-                        className="inline-flex items-center text-sm font-semibold text-neutral-900 dark:text-white hover:text-blue-500 transition-colors w-fit text-left py-1 cursor-pointer"
+                        className="inline-flex items-center text-sm font-semibold text-neutral-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-500 transition-colors w-fit text-left py-1 cursor-pointer"
                       >
                         <span>{item.title}</span>
                         <ChevronDown
                           size={14}
-                          className={`ml-2 transition-transform duration-300 text-neutral-400 shrink-0 ${
+                          className={`ml-2 transition-transform duration-300 text-neutral-700 dark:text-neutral-400 shrink-0 ${
                             isOpen ? "rotate-180" : ""
                           }`}
                         />
@@ -419,7 +409,7 @@ export default function Header() {
                       <a
                         href={item.url}
                         onClick={() => setSidebarOpen(false)}
-                        className="text-sm font-semibold text-neutral-900 dark:text-white hover:text-blue-500 transition-colors py-1 w-fit"
+                        className="text-sm font-semibold text-neutral-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-500 transition-colors py-1 w-fit"
                       >
                         {item.title}
                       </a>
@@ -434,10 +424,10 @@ export default function Header() {
                             onClick={() => setSidebarOpen(false)}
                             className="flex flex-col p-2 rounded-lg bg-neutral-200/50 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors"
                           >
-                            <span className="text-xs font-semibold text-neutral-800 dark:text-gray-200">
+                            <span className="text-xs font-semibold text-neutral-900 dark:text-gray-200">
                               {child.title}
                             </span>
-                            <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-1">
+                            <span className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-1">
                               {child.desc || defaultChildDesc}
                             </span>
                           </a>
@@ -449,7 +439,7 @@ export default function Header() {
               })}
 
               <div className="mt-4 pt-5 border-t border-neutral-300 dark:border-white/10 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold text-neutral-500 dark:text-gray-400 uppercase">
+                <span className="text-xs font-bold text-neutral-600 dark:text-gray-400 uppercase">
                   {t.options}
                 </span>
                 <div className="flex items-center gap-2">
