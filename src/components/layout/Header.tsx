@@ -36,6 +36,29 @@ const translations = {
   },
 };
 
+const NAV_DICTIONARY: Record<string, { EN: string; VI: string }> = {
+  home: { EN: "Home", VI: "Trang chủ" },
+  "trang chủ": { EN: "Home", VI: "Trang chủ" },
+  about: { EN: "About", VI: "Giới thiệu" },
+  "about me": { EN: "About Me", VI: "Về tôi" },
+  "giới thiệu": { EN: "About", VI: "Giới thiệu" },
+  "về tôi": { EN: "About Me", VI: "Về tôi" },
+  services: { EN: "Services", VI: "Dịch vụ" },
+  "my services": { EN: "My Services", VI: "Dịch vụ của tôi" },
+  "dịch vụ": { EN: "Services", VI: "Dịch vụ" },
+  projects: { EN: "Projects", VI: "Dự án" },
+  portfolio: { EN: "Portfolio", VI: "Dự án" },
+  "dự án": { EN: "Projects", VI: "Dự án" },
+  resume: { EN: "Resume", VI: "Hồ sơ" },
+  "hồ sơ": { EN: "Resume", VI: "Hồ sơ" },
+  testimonials: { EN: "Testimonials", VI: "Đánh giá" },
+  "đánh giá": { EN: "Testimonials", VI: "Đánh giá" },
+  blog: { EN: "Blog", VI: "Bài viết" },
+  "bài viết": { EN: "Blog", VI: "Bài viết" },
+  contact: { EN: "Contact", VI: "Liên hệ" },
+  "liên hệ": { EN: "Contact", VI: "Liên hệ" },
+};
+
 interface NavbarChild {
   id: number;
   title: string;
@@ -56,8 +79,14 @@ async function translateNavText(
   text: string,
   targetLang: Lang,
 ): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
+  const raw = text ?? "";
+  const trimmed = raw.trim();
+  if (!trimmed) return raw;
+
+  const dictHit = NAV_DICTIONARY[trimmed.toLowerCase()];
+  if (dictHit) {
+    return dictHit[targetLang];
+  }
 
   const cacheKey = `${targetLang}:${trimmed}`;
   if (navTranslationCache.has(cacheKey)) {
@@ -72,16 +101,18 @@ async function translateNavText(
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.translatedText) {
-        navTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
+      const translated =
+        data?.translatedText ?? data?.translated ?? data?.text ?? data?.result;
+      if (typeof translated === "string" && translated.trim()) {
+        navTranslationCache.set(cacheKey, translated.trim());
+        return translated.trim();
       }
     }
   } catch {
     // Giữ nguyên text gốc nếu không có /api/translate
   }
 
-  return text;
+  return raw;
 }
 
 export default function Header() {
@@ -145,8 +176,9 @@ export default function Header() {
     fetch("/api/navbar", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setNavItems(data);
+        const list = Array.isArray(data) ? data : data?.data || [];
+        if (Array.isArray(list)) {
+          setNavItems(list);
         }
       })
       .catch((err) => console.error("Lỗi tải menu navbar:", err));
