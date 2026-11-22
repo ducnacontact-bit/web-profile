@@ -62,9 +62,12 @@ async function translateServiceText(
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.translatedText) {
-        serviceTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
+      const translated =
+        data?.translatedText ?? data?.translated ?? data?.text ?? data?.result;
+      if (typeof translated === "string" && translated.trim()) {
+        const clean = translated.trim();
+        serviceTranslationCache.set(cacheKey, clean);
+        return clean;
       }
     }
   } catch {
@@ -114,12 +117,17 @@ export default function Services() {
   const t = uiText[lang];
 
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [translatedServices, setTranslatedServices] = useState<ServiceItem[]>(
-    [],
-  );
+  const [translatedState, setTranslatedState] = useState<{
+    lang: Lang | null;
+    items: ServiceItem[];
+  }>({
+    lang: null,
+    items: [],
+  });
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
     null,
   );
+  const [modalService, setModalService] = useState<ServiceItem | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -143,7 +151,7 @@ export default function Services() {
 
     async function syncServicesLanguage() {
       if (services.length === 0) {
-        if (active) setTranslatedServices([]);
+        if (active) setTranslatedState({ lang, items: [] });
         return;
       }
 
@@ -157,7 +165,7 @@ export default function Services() {
       );
 
       if (active) {
-        setTranslatedServices(nextServices);
+        setTranslatedState({ lang, items: nextServices });
       }
     }
 
@@ -168,15 +176,61 @@ export default function Services() {
     };
   }, [services, lang]);
 
-  const chunks: ServiceItem[][] = [];
-  for (let i = 0; i < translatedServices.length; i += 4) {
-    chunks.push(translatedServices.slice(i, i + 4));
-  }
+  const displayServices =
+    translatedState.lang === lang && translatedState.items.length > 0
+      ? translatedState.items
+      : services;
 
-  const selectedService =
-    selectedServiceId !== null
-      ? translatedServices.find((s) => s.id === selectedServiceId) || null
-      : null;
+  useEffect(() => {
+    let active = true;
+
+    if (selectedServiceId === null) {
+      setModalService(null);
+      return;
+    }
+
+    const fromTranslated =
+      translatedState.lang === lang
+        ? translatedState.items.find((s) => s.id === selectedServiceId) || null
+        : null;
+
+    if (fromTranslated) {
+      setModalService(fromTranslated);
+      return;
+    }
+
+    const rawService = services.find((s) => s.id === selectedServiceId) || null;
+    if (!rawService) {
+      setModalService(null);
+      return;
+    }
+
+    setModalService(rawService);
+
+    Promise.all([
+      translateServiceText(rawService.title, lang),
+      translateServiceText(rawService.shortDesc, lang),
+      translateServiceText(rawService.fullDetail, lang),
+    ]).then(([title, shortDesc, fullDetail]) => {
+      if (active) {
+        setModalService({
+          ...rawService,
+          title,
+          shortDesc,
+          fullDetail,
+        });
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedServiceId, services, translatedState, lang]);
+
+  const chunks: ServiceItem[][] = [];
+  for (let i = 0; i < displayServices.length; i += 4) {
+    chunks.push(displayServices.slice(i, i + 4));
+  }
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!sliderRef.current) return;
@@ -323,7 +377,7 @@ export default function Services() {
       </div>
 
       <AnimatePresence>
-        {selectedService && (
+        {modalService && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 px-4 py-6 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -341,15 +395,15 @@ export default function Services() {
 
               <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 pr-8">
                 <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-white/10 rounded-xl">
-                  {getServiceIcon(selectedService.iconName)}
+                  {getServiceIcon(modalService.iconName)}
                 </div>
                 <h3 className="text-base sm:text-xl font-bold tracking-wide text-neutral-900 dark:text-white">
-                  {selectedService.title}
+                  {modalService.title}
                 </h3>
               </div>
 
               <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-gray-300 mb-6 sm:mb-8 whitespace-pre-line">
-                {selectedService.fullDetail}
+                {modalService.fullDetail}
               </p>
 
               <button
