@@ -95,10 +95,10 @@ async function translateProjectText(
   return text;
 }
 
-// Chuẩn hóa span để không gây vỡ grid dọc/ngang trên màn hình điện thoại (< 640px)
-function getResponsiveSpan(span?: string): string {
-  if (!span) return "col-span-1 row-span-1";
-  const normalized = span
+// Trên mobile (< 640px) ép về 1 ô gọn gàng để không vỡ grid, từ sm trở lên giữ span gốc của bạn
+function getMobileSafeSpan(span?: string): string {
+  const baseSpan = span || "col-span-1 row-span-1";
+  const smPrefixed = baseSpan
     .split(/\s+/)
     .filter(Boolean)
     .map((cls) => {
@@ -114,13 +114,8 @@ function getResponsiveSpan(span?: string): string {
       }
       return cls;
     });
-  if (!normalized.includes("col-span-1")) {
-    normalized.unshift("col-span-1");
-  }
-  if (!normalized.includes("row-span-1")) {
-    normalized.unshift("row-span-1");
-  }
-  return normalized.join(" ");
+
+  return `col-span-1 row-span-1 ${smPrefixed.join(" ")}`.trim();
 }
 
 export default function LatestProjects() {
@@ -227,33 +222,33 @@ export default function LatestProjects() {
   return (
     <section
       id="projects"
-      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white text-neutral-900 dark:bg-[#111] dark:text-white px-4 sm:px-6 py-16 sm:py-24 lg:px-24 transition-colors duration-300"
+      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white text-neutral-900 dark:bg-[#111] dark:text-white px-4 py-16 sm:px-6 sm:py-24 lg:px-24 transition-colors duration-300"
     >
       <div className="mx-auto w-full max-w-7xl">
         {/* Tiêu đề "Latest Projects" căn giữa với khung chấm chấm lót sau chữ */}
         <div className="flex justify-center mb-8 sm:mb-10">
           <div className="relative inline-block text-center">
             <div
-              className="absolute -left-3 sm:-left-4 -top-2 sm:-top-3 h-12 sm:h-14 w-32 sm:w-40 z-0 text-neutral-900 dark:text-white opacity-20 dark:opacity-40 pointer-events-none"
+              className="absolute -left-4 -top-3 h-14 w-40 z-0 text-neutral-900 dark:text-white opacity-20 dark:opacity-40 pointer-events-none"
               style={{
                 backgroundImage:
                   "radial-gradient(currentColor 1.2px, transparent 1.2px)",
                 backgroundSize: "6px 6px",
               }}
             />
-            <h2 className="relative z-10 text-2xl sm:text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            <h2 className="relative z-10 text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">
               {t.sectionTitle}
             </h2>
           </div>
         </div>
 
-        {/* Thanh lọc danh mục (Filter Tabs) đồng bộ ngôn ngữ VI/EN */}
-        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2.5 sm:gap-8 lg:gap-10 mb-10 sm:mb-14 text-[11px] sm:text-xs font-bold tracking-wider sm:tracking-widest text-neutral-500 dark:text-gray-400">
+        {/* Thanh lọc danh mục (Filter Tabs) */}
+        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2.5 sm:gap-6 sm:gap-10 mb-10 sm:mb-16 text-[11px] sm:text-xs font-bold tracking-widest text-neutral-500 dark:text-gray-400">
           {dynamicCategoryKeys.map((catKey) => (
             <button
               key={catKey}
               onClick={() => setActiveFilter(catKey)}
-              className={`cursor-pointer transition-colors duration-300 pb-1 border-b-2 whitespace-nowrap ${
+              className={`cursor-pointer transition-colors duration-300 pb-1 border-b-2 ${
                 activeFilter === catKey
                   ? "text-neutral-900 border-neutral-900 dark:text-white dark:border-white"
                   : "border-transparent hover:text-neutral-900 dark:hover:text-gray-200"
@@ -264,15 +259,15 @@ export default function LatestProjects() {
           ))}
         </div>
 
-        {/* Lưới dự án */}
+        {/* Lưới dự án (Masonry / Grid nghệ thuật) */}
         {translatedProjects.length === 0 ? (
-          <div className="text-center py-14 sm:py-20 text-neutral-500 text-xs sm:text-sm">
+          <div className="text-center py-20 text-neutral-500 text-sm">
             {t.emptyProjects}
           </div>
         ) : (
           <motion.div
             layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 auto-rows-[220px] sm:auto-rows-[260px] lg:auto-rows-[280px]"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 auto-rows-[220px] sm:auto-rows-[280px]"
           >
             {filteredProjects.map((project, index) => (
               <motion.div
@@ -283,7 +278,7 @@ export default function LatestProjects() {
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 key={project.id}
                 onClick={() => setSelectedProjectId(project.id)}
-                className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group rounded-xl ${getResponsiveSpan(
+                className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group ${getMobileSafeSpan(
                   project.span,
                 )}`}
               >
@@ -293,11 +288,11 @@ export default function LatestProjects() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 sm:p-6">
-                  <span className="text-[10px] uppercase tracking-widest text-gray-300 mb-1 line-clamp-1">
+                <div className="absolute inset-0 bg-black/60 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 sm:p-6">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-300 mb-1">
                     {project.category}
                   </span>
-                  <h3 className="text-xs sm:text-base font-bold tracking-wider text-white line-clamp-1">
+                  <h3 className="text-sm sm:text-base font-bold tracking-wider text-white">
                     {project.title}
                   </h3>
                 </div>
@@ -315,17 +310,16 @@ export default function LatestProjects() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto bg-neutral-100 dark:bg-[#1a1a1a] border border-neutral-300 dark:border-white/10 shadow-2xl grid grid-cols-1 md:grid-cols-2 text-neutral-900 dark:text-white transition-colors duration-300 rounded-2xl"
+              className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto bg-neutral-100 dark:bg-[#1a1a1a] border border-neutral-300 dark:border-white/10 overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-2 text-neutral-900 dark:text-white transition-colors duration-300 rounded-2xl"
             >
               <button
                 onClick={() => setSelectedProjectId(null)}
-                aria-label={t.closeButton}
-                className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 bg-neutral-200/90 dark:bg-black/60 p-2 rounded-full text-neutral-700 dark:text-gray-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+                className="absolute top-4 right-4 z-20 bg-neutral-200 dark:bg-black/50 p-2 rounded-full text-neutral-700 dark:text-gray-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                <X className="w-5 h-5" />
               </button>
 
-              <div className="h-52 sm:h-64 md:h-full w-full bg-neutral-200 dark:bg-black shrink-0">
+              <div className="h-56 sm:h-64 md:h-full w-full bg-neutral-200 dark:bg-black">
                 <img
                   src={selectedProject.image}
                   alt={selectedProject.title}
@@ -333,23 +327,23 @@ export default function LatestProjects() {
                 />
               </div>
 
-              <div className="p-5 sm:p-8 md:p-10 flex flex-col justify-between text-left">
+              <div className="p-5 sm:p-8 md:p-12 flex flex-col justify-between text-left">
                 <div>
-                  <span className="inline-block px-3 py-1 bg-neutral-200 dark:bg-white/10 text-[10px] font-bold tracking-widest text-neutral-700 dark:text-gray-300 mb-3 sm:mb-4 rounded-md">
+                  <span className="inline-block px-3 py-1 bg-neutral-200 dark:bg-white/10 text-[10px] font-bold tracking-widest text-neutral-700 dark:text-gray-300 mb-4 rounded-md">
                     {selectedProject.category}
                   </span>
-                  <h3 className="text-lg sm:text-2xl font-bold tracking-wide text-neutral-900 dark:text-white mb-3 sm:mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-wide text-neutral-900 dark:text-white mb-4">
                     {selectedProject.title}
                   </h3>
-                  <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-gray-400 mb-6 sm:mb-8 whitespace-pre-line">
+                  <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-gray-400 mb-6 sm:mb-8">
                     {selectedProject.desc}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center space-x-4">
                   <button
                     onClick={() => setSelectedProjectId(null)}
-                    className="flex-1 bg-neutral-900 text-white dark:bg-white dark:text-black py-3 sm:py-3.5 text-xs font-bold uppercase tracking-widest transition-all hover:bg-neutral-800 dark:hover:bg-neutral-200 cursor-pointer rounded-xl"
+                    className="flex-1 bg-neutral-900 text-white dark:bg-white dark:text-black py-3.5 text-xs font-bold uppercase tracking-widest transition-all hover:bg-neutral-800 dark:hover:bg-neutral-200 cursor-pointer rounded-xl"
                   >
                     {t.closeButton}
                   </button>
@@ -359,10 +353,9 @@ export default function LatestProjects() {
                       e.preventDefault();
                       alert(t.projectDetailAlert);
                     }}
-                    aria-label={t.projectDetailAlert}
-                    className="p-3 sm:p-3.5 border border-neutral-300 dark:border-white/20 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors rounded-xl flex items-center justify-center shrink-0"
+                    className="p-3.5 border border-neutral-300 dark:border-white/20 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors rounded-xl flex items-center justify-center"
                   >
-                    <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <ExternalLink className="w-5 h-5" />
                   </a>
                 </div>
               </div>
