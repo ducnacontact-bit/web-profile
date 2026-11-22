@@ -14,6 +14,29 @@ interface ProjectItem {
   desc: string;
 }
 
+const CATEGORY_LABELS: Record<Lang, Record<string, string>> = {
+  VI: {
+    "ALL WORK": "TẤT CẢ",
+    "WEB DESIGN": "THIẾT KẾ WEB",
+    "WEB DEVELOPMENT": "PHÁT TRIỂN WEB",
+    GRAPHIC: "ĐỒ HỌA",
+    "GRAPHIC DESIGN": "THIẾT KẾ ĐỒ HỌA",
+    "UI/UX DESIGN": "THIẾT KẾ UI/UX",
+    PRINT: "IN ẤN",
+    ILLUSTRATION: "MINH HỌA",
+  },
+  EN: {
+    "ALL WORK": "ALL WORK",
+    "WEB DESIGN": "WEB DESIGN",
+    "WEB DEVELOPMENT": "WEB DEVELOPMENT",
+    GRAPHIC: "GRAPHIC",
+    "GRAPHIC DESIGN": "GRAPHIC DESIGN",
+    "UI/UX DESIGN": "UI/UX DESIGN",
+    PRINT: "PRINT",
+    ILLUSTRATION: "ILLUSTRATION",
+  },
+};
+
 const uiText = {
   VI: {
     sectionTitle: "Dự Án Mới Nhất",
@@ -21,13 +44,6 @@ const uiText = {
     closeButton: "ĐÓNG",
     projectDetailAlert: "Đường dẫn chi tiết dự án!",
     fetchError: "Lỗi tải dự án:",
-    categories: {
-      "ALL WORK": "TẤT CẢ",
-      "WEB DESIGN": "THIẾT KẾ WEB",
-      GRAPHIC: "ĐỒ HỌA",
-      PRINT: "IN ẤN",
-      ILLUSTRATION: "MINH HỌA",
-    } as Record<string, string>,
   },
   EN: {
     sectionTitle: "Latest Projects",
@@ -35,13 +51,6 @@ const uiText = {
     closeButton: "CLOSE",
     projectDetailAlert: "Project detail link!",
     fetchError: "Failed to load projects:",
-    categories: {
-      "ALL WORK": "ALL WORK",
-      "WEB DESIGN": "WEB DESIGN",
-      GRAPHIC: "GRAPHIC",
-      PRINT: "PRINT",
-      ILLUSTRATION: "ILLUSTRATION",
-    } as Record<string, string>,
   },
 };
 
@@ -53,6 +62,11 @@ async function translateProjectText(
 ): Promise<string> {
   const trimmed = text?.trim();
   if (!trimmed) return text || "";
+
+  const upper = trimmed.toUpperCase();
+  if (CATEGORY_LABELS[targetLang][upper]) {
+    return CATEGORY_LABELS[targetLang][upper];
+  }
 
   const cacheKey = `${targetLang}:${trimmed}`;
   if (projectTranslationCache.has(cacheKey)) {
@@ -67,9 +81,11 @@ async function translateProjectText(
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.translatedText) {
-        projectTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
+      const translated =
+        data?.translatedText ?? data?.translated ?? data?.text ?? data?.result;
+      if (typeof translated === "string" && translated.trim()) {
+        projectTranslationCache.set(cacheKey, translated.trim());
+        return translated.trim();
       }
     }
   } catch {
@@ -77,6 +93,34 @@ async function translateProjectText(
   }
 
   return text;
+}
+
+// Chuẩn hóa span để không gây vỡ grid dọc/ngang trên màn hình điện thoại (< 640px)
+function getResponsiveSpan(span?: string): string {
+  if (!span) return "col-span-1 row-span-1";
+  const normalized = span
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((cls) => {
+      if (
+        cls.startsWith("sm:") ||
+        cls.startsWith("md:") ||
+        cls.startsWith("lg:")
+      ) {
+        return cls;
+      }
+      if (cls === "col-span-2" || cls === "row-span-2") {
+        return `sm:${cls}`;
+      }
+      return cls;
+    });
+  if (!normalized.includes("col-span-1")) {
+    normalized.unshift("col-span-1");
+  }
+  if (!normalized.includes("row-span-1")) {
+    normalized.unshift("row-span-1");
+  }
+  return normalized.join(" ");
 }
 
 export default function LatestProjects() {
@@ -114,15 +158,18 @@ export default function LatestProjects() {
 
       const nextProjects = await Promise.all(
         projects.map(async (project) => {
-          const translatedCategory =
-            t.categories[project.category] ||
-            (await translateProjectText(project.category, lang));
+          const [translatedTitle, translatedCategory, translatedDesc] =
+            await Promise.all([
+              translateProjectText(project.title, lang),
+              translateProjectText(project.category, lang),
+              translateProjectText(project.desc, lang),
+            ]);
 
           return {
             ...project,
-            title: await translateProjectText(project.title, lang),
+            title: translatedTitle,
             category: translatedCategory,
-            desc: await translateProjectText(project.desc, lang),
+            desc: translatedDesc,
           };
         }),
       );
@@ -137,7 +184,7 @@ export default function LatestProjects() {
     return () => {
       active = false;
     };
-  }, [projects, lang, t.categories]);
+  }, [projects, lang]);
 
   const dynamicCategoryKeys = useMemo(() => {
     const categoriesFromData = Array.from(
@@ -155,6 +202,11 @@ export default function LatestProjects() {
       setActiveFilter("ALL WORK");
     }
   }, [dynamicCategoryKeys, activeFilter]);
+
+  const getCategoryTabLabel = (catKey: string) => {
+    const upper = catKey.trim().toUpperCase();
+    return CATEGORY_LABELS[lang][upper] || catKey;
+  };
 
   const filteredProjectIds = new Set(
     (activeFilter === "ALL WORK"
@@ -195,7 +247,7 @@ export default function LatestProjects() {
           </div>
         </div>
 
-        {/* Thanh lọc danh mục (Filter Tabs) sinh động theo dữ liệu projects */}
+        {/* Thanh lọc danh mục (Filter Tabs) đồng bộ ngôn ngữ VI/EN */}
         <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2.5 sm:gap-8 lg:gap-10 mb-10 sm:mb-14 text-[11px] sm:text-xs font-bold tracking-wider sm:tracking-widest text-neutral-500 dark:text-gray-400">
           {dynamicCategoryKeys.map((catKey) => (
             <button
@@ -207,12 +259,12 @@ export default function LatestProjects() {
                   : "border-transparent hover:text-neutral-900 dark:hover:text-gray-200"
               }`}
             >
-              {t.categories[catKey] || catKey}
+              {getCategoryTabLabel(catKey)}
             </button>
           ))}
         </div>
 
-        {/* Lưới dự án (Masonry / Grid nghệ thuật) */}
+        {/* Lưới dự án */}
         {translatedProjects.length === 0 ? (
           <div className="text-center py-14 sm:py-20 text-neutral-500 text-xs sm:text-sm">
             {t.emptyProjects}
@@ -231,9 +283,9 @@ export default function LatestProjects() {
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 key={project.id}
                 onClick={() => setSelectedProjectId(project.id)}
-                className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group rounded-xl ${
-                  project.span || "col-span-1 row-span-1"
-                }`}
+                className={`relative overflow-hidden bg-neutral-100 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 cursor-pointer group rounded-xl ${getResponsiveSpan(
+                  project.span,
+                )}`}
               >
                 <img
                   src={project.image}
@@ -241,7 +293,7 @@ export default function LatestProjects() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 sm:p-6">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 sm:p-6">
                   <span className="text-[10px] uppercase tracking-widest text-gray-300 mb-1 line-clamp-1">
                     {project.category}
                   </span>
