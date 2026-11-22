@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { GraduationCap, Briefcase } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateList } from "@/lib/translator";
 
 interface ResumeItem {
   id: number;
@@ -33,46 +34,18 @@ const uiText = {
   },
 };
 
-const resumeTranslationCache = new Map<string, string>();
-
-async function translateResumeText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (resumeTranslationCache.has(cacheKey)) {
-    return resumeTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.translatedText) {
-        resumeTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
-  }
-
-  return text;
-}
-
 export default function Resume() {
   const { lang } = useLanguage();
   const t = uiText[lang];
 
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
-  const [translatedResumes, setTranslatedResumes] = useState<ResumeItem[]>([]);
+  const [translatedState, setTranslatedState] = useState<{
+    lang: Lang | null;
+    items: ResumeItem[];
+  }>({
+    lang: null,
+    items: [],
+  });
 
   useEffect(() => {
     fetch("/api/resume", { cache: "no-store" })
@@ -90,29 +63,28 @@ export default function Resume() {
 
     async function syncResumesLanguage() {
       if (resumes.length === 0) {
-        if (active) setTranslatedResumes([]);
+        if (active) setTranslatedState({ lang, items: [] });
         return;
       }
 
-      const nextResumes = await Promise.all(
-        resumes.map(async (item) => ({
+      const nextResumes = await translateList(
+        resumes,
+        lang,
+        async (item, translate) => ({
           ...item,
-          time: item.time
-            ? await translateResumeText(item.time, lang)
-            : item.time,
-          title: await translateResumeText(item.title, lang),
-          desc: await translateResumeText(item.desc, lang),
+          time: item.time ? await translate(item.time) : item.time,
+          title: await translate(item.title),
+          desc: await translate(item.desc),
           institution: item.institution
-            ? await translateResumeText(item.institution, lang)
+            ? await translate(item.institution)
             : item.institution,
-          role: item.role
-            ? await translateResumeText(item.role, lang)
-            : item.role,
-        })),
+          role: item.role ? await translate(item.role) : item.role,
+        }),
+        2,
       );
 
       if (active) {
-        setTranslatedResumes(nextResumes);
+        setTranslatedState({ lang, items: nextResumes });
       }
     }
 
@@ -123,10 +95,15 @@ export default function Resume() {
     };
   }, [resumes, lang]);
 
-  const educationList = translatedResumes.filter(
+  const displayResumes =
+    translatedState.lang === lang && translatedState.items.length > 0
+      ? translatedState.items
+      : resumes;
+
+  const educationList = displayResumes.filter(
     (item) => item.type === "education",
   );
-  const experienceList = translatedResumes.filter(
+  const experienceList = displayResumes.filter(
     (item) => item.type === "experience",
   );
 

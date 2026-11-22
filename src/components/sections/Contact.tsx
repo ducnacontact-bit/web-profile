@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Headphones, MapPin, Mail, Send, Edit3 } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateText } from "@/lib/translator";
 
 interface ContactConfig {
   phone: string;
@@ -51,49 +52,19 @@ const uiText = {
   },
 };
 
-const contactTranslationCache = new Map<string, string>();
-
-async function translateContactText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (contactTranslationCache.has(cacheKey)) {
-    return contactTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.translatedText) {
-        contactTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
-      }
-    }
-  } catch {
-    // Giữ nguyên dữ liệu từ DB nếu /api/translate lỗi
-  }
-
-  return text;
-}
-
 export default function Contact() {
   const { lang } = useLanguage();
   const t = uiText[lang];
 
   const [contactInfo, setContactInfo] =
     useState<ContactConfig>(FALLBACK_CONTACT);
-  const [displayAddress, setDisplayAddress] = useState<string>(
-    FALLBACK_CONTACT.address,
-  );
+  const [translatedAddressState, setTranslatedAddressState] = useState<{
+    lang: Lang | null;
+    address: string;
+  }>({
+    lang: null,
+    address: FALLBACK_CONTACT.address,
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -133,16 +104,15 @@ export default function Contact() {
   // Dịch địa chỉ từ DB theo ngôn ngữ hiện tại (VI / EN) mà không đè dữ liệu mẫu cứng
   useEffect(() => {
     let active = true;
+    const sourceAddress = contactInfo.address || FALLBACK_CONTACT.address;
 
     async function syncAddressLanguage() {
-      const sourceAddress = contactInfo.address || FALLBACK_CONTACT.address;
+      const nextAddress = await translateText(sourceAddress, lang);
       if (active) {
-        setDisplayAddress(sourceAddress);
-      }
-
-      const nextAddress = await translateContactText(sourceAddress, lang);
-      if (active && nextAddress) {
-        setDisplayAddress(nextAddress);
+        setTranslatedAddressState({
+          lang,
+          address: nextAddress || sourceAddress,
+        });
       }
     }
 
@@ -152,6 +122,11 @@ export default function Contact() {
       active = false;
     };
   }, [contactInfo.address, lang]);
+
+  const displayAddress =
+    translatedAddressState.lang === lang
+      ? translatedAddressState.address
+      : contactInfo.address || FALLBACK_CONTACT.address;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Share2, Globe, MessageCircle, ExternalLink } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateList } from "@/lib/translator";
 
 interface BlogPostItem {
   id: number;
@@ -34,46 +35,18 @@ const uiText = {
   },
 };
 
-const blogTranslationCache = new Map<string, string>();
-
-async function translateBlogText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (blogTranslationCache.has(cacheKey)) {
-    return blogTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.translatedText) {
-        blogTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
-  }
-
-  return text;
-}
-
 export default function Blog() {
   const { lang } = useLanguage();
   const t = uiText[lang];
 
   const [posts, setPosts] = useState<BlogPostItem[]>([]);
-  const [translatedPosts, setTranslatedPosts] = useState<BlogPostItem[]>([]);
+  const [translatedState, setTranslatedState] = useState<{
+    lang: Lang | null;
+    items: BlogPostItem[];
+  }>({
+    lang: null,
+    items: [],
+  });
 
   useEffect(() => {
     fetch("/api/blog", { cache: "no-store" })
@@ -91,20 +64,23 @@ export default function Blog() {
 
     async function syncPostsLanguage() {
       if (posts.length === 0) {
-        if (active) setTranslatedPosts([]);
+        if (active) setTranslatedState({ lang, items: [] });
         return;
       }
 
-      const nextPosts = await Promise.all(
-        posts.map(async (post) => ({
+      const nextPosts = await translateList(
+        posts,
+        lang,
+        async (post, translate) => ({
           ...post,
-          title: await translateBlogText(post.title, lang),
-          excerpt: await translateBlogText(post.excerpt, lang),
-        })),
+          title: await translate(post.title),
+          excerpt: await translate(post.excerpt),
+        }),
+        2,
       );
 
       if (active) {
-        setTranslatedPosts(nextPosts);
+        setTranslatedState({ lang, items: nextPosts });
       }
     }
 
@@ -115,7 +91,12 @@ export default function Blog() {
     };
   }, [posts, lang]);
 
-  if (translatedPosts.length === 0) {
+  const displayPosts =
+    translatedState.lang === lang && translatedState.items.length > 0
+      ? translatedState.items
+      : posts;
+
+  if (displayPosts.length === 0) {
     return (
       <section
         id="blog"
@@ -143,8 +124,8 @@ export default function Blog() {
     );
   }
 
-  const mainPost = translatedPosts[0];
-  const subPosts = translatedPosts.slice(1);
+  const mainPost = displayPosts[0];
+  const subPosts = displayPosts.slice(1);
 
   return (
     <section

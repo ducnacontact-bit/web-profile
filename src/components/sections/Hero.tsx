@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateText, translateList } from "@/lib/translator";
 
 interface HeroData {
   roles?: string[] | string;
@@ -17,6 +18,13 @@ interface HeroData {
         url: string;
       }[]
     | string;
+}
+
+interface HeroDisplayState {
+  lang: Lang | null;
+  greeting: string;
+  description: string;
+  roles: string[];
 }
 
 const uiText = {
@@ -38,40 +46,6 @@ const uiText = {
   },
 };
 
-const heroTranslationCache = new Map<string, string>();
-
-async function translateHeroText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (heroTranslationCache.has(cacheKey)) {
-    return heroTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.translatedText) {
-        heroTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
-  }
-
-  return text;
-}
-
 export default function Hero() {
   const { lang } = useLanguage();
   const t = uiText[lang];
@@ -86,15 +60,12 @@ export default function Hero() {
     socials: [],
   });
 
-  const [displayGreeting, setDisplayGreeting] = useState(
-    uiText.EN.defaultGreeting,
-  );
-  const [displayDescription, setDisplayDescription] = useState(
-    uiText.EN.defaultDescription,
-  );
-  const [displayRoles, setDisplayRoles] = useState<string[]>(
-    uiText.EN.defaultRoles,
-  );
+  const [translatedHero, setTranslatedHero] = useState<HeroDisplayState>({
+    lang: null,
+    greeting: uiText.EN.defaultGreeting,
+    description: uiText.EN.defaultDescription,
+    roles: uiText.EN.defaultRoles,
+  });
 
   const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
   const [currentText, setCurrentText] = useState("");
@@ -146,25 +117,33 @@ export default function Hero() {
         : t.defaultRoles;
 
     async function syncLanguage() {
-      const nextGreeting = heroData.greeting
-        ? await translateHeroText(heroData.greeting, lang)
-        : t.defaultGreeting;
-
-      const nextDescription = heroData.description
-        ? await translateHeroText(heroData.description, lang)
-        : t.defaultDescription;
-
-      const nextRoles =
-        rawRoles.length > 0
-          ? await Promise.all(
-              rawRoles.map((role) => translateHeroText(role, lang)),
-            )
-          : t.defaultRoles;
+      const [nextGreeting, nextDescription, translatedRoles] =
+        await Promise.all([
+          heroData.greeting
+            ? translateText(heroData.greeting, lang)
+            : Promise.resolve(t.defaultGreeting),
+          heroData.description
+            ? translateText(heroData.description, lang)
+            : Promise.resolve(t.defaultDescription),
+          rawRoles.length > 0
+            ? translateList(
+                rawRoles,
+                lang,
+                async (role, translate) => translate(role),
+                2,
+              )
+            : Promise.resolve(t.defaultRoles),
+        ]);
 
       if (active) {
-        setDisplayGreeting(nextGreeting);
-        setDisplayDescription(nextDescription);
-        setDisplayRoles(nextRoles.length > 0 ? nextRoles : t.defaultRoles);
+        const finalRoles =
+          translatedRoles.length > 0 ? translatedRoles : t.defaultRoles;
+        setTranslatedHero({
+          lang,
+          greeting: nextGreeting || t.defaultGreeting,
+          description: nextDescription || t.defaultDescription,
+          roles: finalRoles,
+        });
         setCurrentRoleIndex(0);
         setCurrentText("");
         setIsDeleting(false);
@@ -177,6 +156,32 @@ export default function Hero() {
       active = false;
     };
   }, [heroData, lang, t.defaultGreeting, t.defaultDescription, t.defaultRoles]);
+
+  const fallbackRoles: string[] = Array.isArray(heroData.roles)
+    ? heroData.roles
+    : typeof heroData.roles === "string"
+      ? heroData.roles
+          .split(",")
+          .map((r) => r.trim())
+          .filter(Boolean)
+      : t.defaultRoles;
+
+  const displayGreeting =
+    translatedHero.lang === lang
+      ? translatedHero.greeting
+      : heroData.greeting || t.defaultGreeting;
+
+  const displayDescription =
+    translatedHero.lang === lang
+      ? translatedHero.description
+      : heroData.description || t.defaultDescription;
+
+  const displayRoles =
+    translatedHero.lang === lang && translatedHero.roles.length > 0
+      ? translatedHero.roles
+      : fallbackRoles.length > 0
+        ? fallbackRoles
+        : t.defaultRoles;
 
   useEffect(() => {
     const checkTheme = () => {

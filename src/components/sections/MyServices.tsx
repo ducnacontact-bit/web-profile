@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateText, translateList } from "@/lib/translator";
 
 interface ServiceItem {
   id: number;
@@ -39,43 +40,6 @@ const uiText = {
     fetchError: "Failed to load services:",
   },
 };
-
-const serviceTranslationCache = new Map<string, string>();
-
-async function translateServiceText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (serviceTranslationCache.has(cacheKey)) {
-    return serviceTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const translated =
-        data?.translatedText ?? data?.translated ?? data?.text ?? data?.result;
-      if (typeof translated === "string" && translated.trim()) {
-        const clean = translated.trim();
-        serviceTranslationCache.set(cacheKey, clean);
-        return clean;
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
-  }
-
-  return text;
-}
 
 const getServiceIcon = (iconName: string) => {
   const iconMap: { [key: string]: React.ReactNode } = {
@@ -155,13 +119,16 @@ export default function Services() {
         return;
       }
 
-      const nextServices = await Promise.all(
-        services.map(async (service) => ({
+      const nextServices = await translateList(
+        services,
+        lang,
+        async (service, translate) => ({
           ...service,
-          title: await translateServiceText(service.title, lang),
-          shortDesc: await translateServiceText(service.shortDesc, lang),
-          fullDetail: await translateServiceText(service.fullDetail, lang),
-        })),
+          title: await translate(service.title),
+          shortDesc: await translate(service.shortDesc),
+          fullDetail: await translate(service.fullDetail),
+        }),
+        2,
       );
 
       if (active) {
@@ -208,9 +175,9 @@ export default function Services() {
     setModalService(rawService);
 
     Promise.all([
-      translateServiceText(rawService.title, lang),
-      translateServiceText(rawService.shortDesc, lang),
-      translateServiceText(rawService.fullDetail, lang),
+      translateText(rawService.title, lang),
+      translateText(rawService.shortDesc, lang),
+      translateText(rawService.fullDetail, lang),
     ]).then(([title, shortDesc, fullDetail]) => {
       if (active) {
         setModalService({

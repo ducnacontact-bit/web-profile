@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateText, translateList } from "@/lib/translator";
 
 interface ProjectItem {
   id: number;
@@ -54,9 +55,7 @@ const uiText = {
   },
 };
 
-const projectTranslationCache = new Map<string, string>();
-
-async function translateProjectText(
+async function translateProjectField(
   text: string,
   targetLang: Lang,
 ): Promise<string> {
@@ -68,31 +67,7 @@ async function translateProjectText(
     return CATEGORY_LABELS[targetLang][upper];
   }
 
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (projectTranslationCache.has(cacheKey)) {
-    return projectTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const translated =
-        data?.translatedText ?? data?.translated ?? data?.text ?? data?.result;
-      if (typeof translated === "string" && translated.trim()) {
-        projectTranslationCache.set(cacheKey, translated.trim());
-        return translated.trim();
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
-  }
-
-  return text;
+  return translateText(trimmed, targetLang);
 }
 
 export default function LatestProjects() {
@@ -100,13 +75,18 @@ export default function LatestProjects() {
   const t = uiText[lang];
 
   const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [translatedProjects, setTranslatedProjects] = useState<ProjectItem[]>(
-    [],
-  );
+  const [translatedState, setTranslatedState] = useState<{
+    lang: Lang | null;
+    items: ProjectItem[];
+  }>({
+    lang: null,
+    items: [],
+  });
   const [activeFilter, setActiveFilter] = useState<string>("ALL WORK");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     null,
   );
+  const [modalProject, setModalProject] = useState<ProjectItem | null>(null);
 
   useEffect(() => {
     fetch("/api/projects", { cache: "no-store" })
@@ -124,18 +104,23 @@ export default function LatestProjects() {
 
     async function syncProjectsLanguage() {
       if (projects.length === 0) {
-        if (active) setTranslatedProjects([]);
+        if (active) setTranslatedState({ lang, items: [] });
         return;
       }
 
-      const nextProjects = await Promise.all(
-        projects.map(async (project) => {
-          const [translatedTitle, translatedCategory, translatedDesc] =
-            await Promise.all([
-              translateProjectText(project.title, lang),
-              translateProjectText(project.category, lang),
-              translateProjectText(project.desc, lang),
-            ]);
+      const nextProjects = await translateList(
+        projects,
+        lang,
+        async (project, translate) => {
+          const upperCat = project.category?.trim().toUpperCase() || "";
+          const translatedCategory = CATEGORY_LABELS[lang][upperCat]
+            ? CATEGORY_LABELS[lang][upperCat]
+            : await translate(project.category);
+
+          const [translatedTitle, translatedDesc] = await Promise.all([
+            translate(project.title),
+            translate(project.desc),
+          ]);
 
           return {
             ...project,
@@ -143,11 +128,12 @@ export default function LatestProjects() {
             category: translatedCategory,
             desc: translatedDesc,
           };
-        }),
+        },
+        2,
       );
 
       if (active) {
-        setTranslatedProjects(nextProjects);
+        setTranslatedState({ lang, items: nextProjects });
       }
     }
 
@@ -157,6 +143,57 @@ export default function LatestProjects() {
       active = false;
     };
   }, [projects, lang]);
+
+  const displayProjects =
+    translatedState.lang === lang && translatedState.items.length > 0
+      ? translatedState.items
+      : projects;
+
+  useEffect(() => {
+    let active = true;
+
+    if (selectedProjectId === null) {
+      setModalProject(null);
+      return;
+    }
+
+    const fromTranslated =
+      translatedState.lang === lang
+        ? translatedState.items.find((p) => p.id === selectedProjectId) || null
+        : null;
+
+    if (fromTranslated) {
+      setModalProject(fromTranslated);
+      return;
+    }
+
+    const rawProject = projects.find((p) => p.id === selectedProjectId) || null;
+    if (!rawProject) {
+      setModalProject(null);
+      return;
+    }
+
+    setModalProject(rawProject);
+
+    Promise.all([
+      translateProjectField(rawProject.title, lang),
+      translateProjectField(rawProject.category, lang),
+      translateProjectField(rawProject.desc, lang),
+    ]).then(([title, category, desc]) => {
+      if (active) {
+        setModalProject({
+          ...rawProject,
+          title,
+          category,
+          desc,
+        });
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedProjectId, projects, translatedState, lang]);
 
   const dynamicCategoryKeys = useMemo(() => {
     const categoriesFromData = Array.from(
@@ -187,14 +224,9 @@ export default function LatestProjects() {
     ).map((p) => p.id),
   );
 
-  const filteredProjects = translatedProjects.filter((p) =>
+  const filteredProjects = displayProjects.filter((p) =>
     filteredProjectIds.has(p.id),
   );
-
-  const selectedProject =
-    selectedProjectId !== null
-      ? translatedProjects.find((p) => p.id === selectedProjectId) || null
-      : null;
 
   return (
     <section
@@ -237,7 +269,7 @@ export default function LatestProjects() {
         </div>
 
         {/* Lưới dự án (Masonry / Grid nghệ thuật) - giữ nguyên project.span từ admin trên máy tính */}
-        {translatedProjects.length === 0 ? (
+        {displayProjects.length === 0 ? (
           <div className="text-center py-20 text-neutral-500 text-sm">
             {t.emptyProjects}
           </div>
@@ -281,7 +313,7 @@ export default function LatestProjects() {
 
       {/* Modal Popup hiển thị chi tiết khi bấm vào dự án */}
       <AnimatePresence>
-        {selectedProject && (
+        {modalProject && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/85 px-4 py-6 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -298,8 +330,8 @@ export default function LatestProjects() {
 
               <div className="h-56 sm:h-64 md:h-full w-full bg-neutral-200 dark:bg-black">
                 <img
-                  src={selectedProject.image}
-                  alt={selectedProject.title}
+                  src={modalProject.image}
+                  alt={modalProject.title}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -307,13 +339,13 @@ export default function LatestProjects() {
               <div className="p-5 sm:p-8 md:p-12 flex flex-col justify-between text-left">
                 <div>
                   <span className="inline-block px-3 py-1 bg-neutral-200 dark:bg-white/10 text-[10px] font-bold tracking-widest text-neutral-700 dark:text-gray-300 mb-4 rounded-md">
-                    {selectedProject.category}
+                    {modalProject.category}
                   </span>
                   <h3 className="text-xl sm:text-2xl font-bold tracking-wide text-neutral-900 dark:text-white mb-4">
-                    {selectedProject.title}
+                    {modalProject.title}
                   </h3>
                   <p className="text-xs sm:text-sm leading-relaxed text-neutral-600 dark:text-gray-400 mb-6 sm:mb-8">
-                    {selectedProject.desc}
+                    {modalProject.desc}
                   </p>
                 </div>
 

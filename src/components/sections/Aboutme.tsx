@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateText, translateList } from "@/lib/translator";
 
 interface AboutData {
   image?: string;
@@ -40,40 +41,6 @@ const uiText = {
   },
 };
 
-const translationCache = new Map<string, string>();
-
-async function translateDynamicText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (translationCache.has(cacheKey)) {
-    return translationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.translatedText) {
-        translationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
-      }
-    }
-  } catch {
-    // Fallback về bản gốc nếu chưa có /api/translate
-  }
-
-  return text;
-}
-
 export default function About() {
   const { lang } = useLanguage();
   const t = uiText[lang];
@@ -86,16 +53,29 @@ export default function About() {
     cvUrl: "/cv.pdf",
   });
 
-  const [translatedAbout, setTranslatedAbout] = useState<AboutData>({
-    image: "",
-    paragraph1: "",
-    paragraph2: "",
-    hireMeUrl: "#contact",
-    cvUrl: "/cv.pdf",
+  const [translatedAboutState, setTranslatedAboutState] = useState<{
+    lang: Lang | null;
+    data: AboutData;
+  }>({
+    lang: null,
+    data: {
+      image: "",
+      paragraph1: "",
+      paragraph2: "",
+      hireMeUrl: "#contact",
+      cvUrl: "/cv.pdf",
+    },
   });
 
   const [skills, setSkills] = useState<SkillData[]>([]);
-  const [translatedSkills, setTranslatedSkills] = useState<SkillData[]>([]);
+  const [translatedSkillsState, setTranslatedSkillsState] = useState<{
+    lang: Lang | null;
+    items: SkillData[];
+  }>({
+    lang: null,
+    items: [],
+  });
+
   const [isLoadingAbout, setIsLoadingAbout] = useState(true);
 
   useEffect(() => {
@@ -147,50 +127,79 @@ export default function About() {
   useEffect(() => {
     let active = true;
 
-    async function applyLanguage() {
+    async function applyAboutLanguage() {
       const [p1, p2] = await Promise.all([
         aboutData.paragraph1
-          ? translateDynamicText(aboutData.paragraph1, lang)
+          ? translateText(aboutData.paragraph1, lang)
           : Promise.resolve(""),
         aboutData.paragraph2
-          ? translateDynamicText(aboutData.paragraph2, lang)
+          ? translateText(aboutData.paragraph2, lang)
           : Promise.resolve(""),
       ]);
 
       if (active) {
-        setTranslatedAbout({
-          ...aboutData,
-          paragraph1: p1,
-          paragraph2: p2,
+        setTranslatedAboutState({
+          lang,
+          data: {
+            ...aboutData,
+            paragraph1: p1,
+            paragraph2: p2,
+          },
         });
-      }
-
-      if (skills.length > 0) {
-        const nextSkills = await Promise.all(
-          skills.map(async (skill) => ({
-            ...skill,
-            name: await translateDynamicText(skill.name, lang),
-            category: skill.category
-              ? await translateDynamicText(skill.category, lang)
-              : skill.category,
-          })),
-        );
-        if (active) {
-          setTranslatedSkills(nextSkills);
-        }
-      } else if (active) {
-        setTranslatedSkills([]);
       }
     }
 
-    applyLanguage();
+    applyAboutLanguage();
 
     return () => {
       active = false;
     };
-  }, [aboutData, skills, lang]);
+  }, [aboutData, lang]);
 
-  const avatarSrc = translatedAbout.image || aboutData.image;
+  useEffect(() => {
+    let active = true;
+
+    async function applySkillsLanguage() {
+      if (skills.length === 0) {
+        if (active) setTranslatedSkillsState({ lang, items: [] });
+        return;
+      }
+
+      const nextSkills = await translateList(
+        skills,
+        lang,
+        async (skill, translate) => ({
+          ...skill,
+          name: await translate(skill.name),
+          category: skill.category
+            ? await translate(skill.category)
+            : skill.category,
+        }),
+        2,
+      );
+
+      if (active) {
+        setTranslatedSkillsState({ lang, items: nextSkills });
+      }
+    }
+
+    applySkillsLanguage();
+
+    return () => {
+      active = false;
+    };
+  }, [skills, lang]);
+
+  const displayAbout =
+    translatedAboutState.lang === lang ? translatedAboutState.data : aboutData;
+
+  const displaySkills =
+    translatedSkillsState.lang === lang &&
+    translatedSkillsState.items.length > 0
+      ? translatedSkillsState.items
+      : skills;
+
+  const avatarSrc = displayAbout.image || aboutData.image;
 
   return (
     <section
@@ -257,22 +266,22 @@ export default function About() {
               <p>{t.loading}</p>
             ) : (
               <>
-                <p>{translatedAbout.paragraph1}</p>
-                <p>{translatedAbout.paragraph2}</p>
+                <p>{displayAbout.paragraph1}</p>
+                <p>{displayAbout.paragraph2}</p>
               </>
             )}
           </div>
 
           <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
             <a
-              href={translatedAbout.hireMeUrl || "#contact"}
+              href={displayAbout.hireMeUrl || "#contact"}
               className="w-full sm:w-auto inline-flex items-center justify-center bg-neutral-900 text-white dark:bg-white dark:text-black px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-widest transition-all duration-300 hover:bg-neutral-800 dark:hover:bg-neutral-200"
             >
               {t.hireMe}
             </a>
 
             <a
-              href={translatedAbout.cvUrl || "/cv.pdf"}
+              href={displayAbout.cvUrl || "/cv.pdf"}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto inline-flex items-center justify-center border border-neutral-400 dark:border-white/40 px-6 sm:px-8 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-widest text-neutral-900 dark:text-white transition-all duration-300 hover:border-neutral-900 dark:hover:border-white hover:bg-black/5 dark:hover:bg-white/10"
@@ -302,7 +311,7 @@ export default function About() {
         </div>
 
         <div className="grid grid-cols-1 gap-x-8 lg:gap-x-16 gap-y-6 sm:gap-y-8 md:grid-cols-2">
-          {translatedSkills.map((skill, index) => (
+          {displaySkills.map((skill, index) => (
             <motion.div
               key={skill.id}
               initial={{ opacity: 0, y: 20 }}

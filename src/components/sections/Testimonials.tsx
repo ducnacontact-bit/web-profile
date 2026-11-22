@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Heart, Briefcase, Award, Quote } from "lucide-react";
 import { useLanguage, type Lang } from "@/components/LanguageProvider";
+import { translateList } from "@/lib/translator";
 
 interface TestimonialItem {
   id: number;
@@ -38,49 +39,19 @@ const uiText = {
   },
 };
 
-const testimonialTranslationCache = new Map<string, string>();
-
-async function translateTestimonialText(
-  text: string,
-  targetLang: Lang,
-): Promise<string> {
-  const trimmed = text?.trim();
-  if (!trimmed) return text || "";
-
-  const cacheKey = `${targetLang}:${trimmed}`;
-  if (testimonialTranslationCache.has(cacheKey)) {
-    return testimonialTranslationCache.get(cacheKey)!;
-  }
-
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: trimmed, targetLang }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.translatedText) {
-        testimonialTranslationCache.set(cacheKey, data.translatedText);
-        return data.translatedText;
-      }
-    }
-  } catch {
-    // Giữ nguyên text gốc nếu không có endpoint dịch
-  }
-
-  return text;
-}
-
 export default function Testimonials() {
   const { lang } = useLanguage();
   const t = uiText[lang];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
-  const [translatedTestimonials, setTranslatedTestimonials] = useState<
-    TestimonialItem[]
-  >([]);
+  const [translatedState, setTranslatedState] = useState<{
+    lang: Lang | null;
+    items: TestimonialItem[];
+  }>({
+    lang: null,
+    items: [],
+  });
   const [isMobileView, setIsMobileView] = useState(false);
 
   useEffect(() => {
@@ -108,22 +79,23 @@ export default function Testimonials() {
 
     async function syncTestimonialsLanguage() {
       if (testimonials.length === 0) {
-        if (active) setTranslatedTestimonials([]);
+        if (active) setTranslatedState({ lang, items: [] });
         return;
       }
 
-      const nextItems = await Promise.all(
-        testimonials.map(async (item) => ({
+      const nextItems = await translateList(
+        testimonials,
+        lang,
+        async (item, translate) => ({
           ...item,
-          role: item.role
-            ? await translateTestimonialText(item.role, lang)
-            : item.role,
-          content: await translateTestimonialText(item.content, lang),
-        })),
+          role: item.role ? await translate(item.role) : item.role,
+          content: await translate(item.content),
+        }),
+        2,
       );
 
       if (active) {
-        setTranslatedTestimonials(nextItems);
+        setTranslatedState({ lang, items: nextItems });
       }
     }
 
@@ -134,8 +106,13 @@ export default function Testimonials() {
     };
   }, [testimonials, lang]);
 
+  const displayTestimonials =
+    translatedState.lang === lang && translatedState.items.length > 0
+      ? translatedState.items
+      : testimonials;
+
   const visibleCards = isMobileView ? 1 : 2;
-  const maxIndex = Math.max(0, translatedTestimonials.length - visibleCards);
+  const maxIndex = Math.max(0, displayTestimonials.length - visibleCards);
 
   useEffect(() => {
     if (currentIndex > maxIndex) {
@@ -198,7 +175,7 @@ export default function Testimonials() {
           </div>
         </div>
 
-        {translatedTestimonials.length === 0 ? (
+        {displayTestimonials.length === 0 ? (
           <div className="text-center py-12 sm:py-16 text-neutral-500 text-xs sm:text-sm">
             {t.emptyTestimonials}
           </div>
@@ -214,7 +191,7 @@ export default function Testimonials() {
                 animate={{ x: slideOffset }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                {translatedTestimonials.map((item) => (
+                {displayTestimonials.map((item) => (
                   <div
                     key={item.id}
                     className="w-full lg:w-[calc(50%-12px)] flex-shrink-0 relative bg-neutral-200/60 dark:bg-[#161616] border border-neutral-300 dark:border-white/5 p-5 sm:p-8 pt-14 sm:pt-16 hover:border-neutral-400 dark:hover:border-white/20 transition-colors duration-300 shadow-sm rounded-xl"
