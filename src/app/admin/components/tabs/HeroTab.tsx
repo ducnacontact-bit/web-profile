@@ -35,14 +35,15 @@ export default function HeroTab() {
               typeof data.socials === "string"
                 ? JSON.parse(data.socials)
                 : data.socials || [];
-            setSocials(parsedSocials);
-          } catch (e) {
+            setSocials(Array.isArray(parsedSocials) ? parsedSocials : []);
+          } catch {
             setSocials([]);
           }
         }
       })
       .catch((err) => console.error("Lỗi tải cấu hình Hero:", err));
   }, []);
+
   // Xử lý upload ảnh nền từ máy tính (chuyển sang Base64)
   const handleBgUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -71,8 +72,9 @@ export default function HeroTab() {
     field: keyof SocialLink,
     value: string,
   ) => {
-    const updated = [...socials];
-    updated[index][field] = value;
+    const updated = socials.map((item, idx) =>
+      idx === index ? { ...item, [field]: value } : item,
+    );
     setSocials(updated);
   };
 
@@ -96,7 +98,7 @@ export default function HeroTab() {
           description,
           darkBgUrl,
           lightBgUrl,
-          socials: JSON.stringify(socials), // Gửi lên dưới dạng chuỗi JSON
+          socials: JSON.stringify(socials),
         }),
       });
 
@@ -114,9 +116,9 @@ export default function HeroTab() {
   };
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-4 sm:space-y-6 w-full min-w-0">
       <div>
-        <h2 className="text-lg font-bold text-white">
+        <h2 className="text-base sm:text-lg font-bold text-white">
           Quản lý Phần Hero (Trang chủ)
         </h2>
         <p className="text-xs text-neutral-400">
@@ -127,11 +129,11 @@ export default function HeroTab() {
 
       <form
         onSubmit={handleSave}
-        className="bg-[#121215] border border-neutral-800 rounded-2xl p-6 space-y-6 shadow-xl w-full"
+        className="bg-[#121215] border border-neutral-800 rounded-2xl p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-xl w-full min-w-0"
       >
         {/* Lời chào & Vai trò */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <label className="text-xs font-semibold text-neutral-300">
               Lời chào (Greeting)
             </label>
@@ -140,11 +142,11 @@ export default function HeroTab() {
               value={greeting}
               onChange={(e) => setGreeting(e.target.value)}
               placeholder="Ví dụ: Hello,"
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
+              className="w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <label className="text-xs font-semibold text-neutral-300">
               Các vai trò (Ngăn cách bằng dấu phẩy)
             </label>
@@ -153,13 +155,13 @@ export default function HeroTab() {
               value={roles}
               onChange={(e) => setRoles(e.target.value)}
               placeholder="Ví dụ: Electrical Engineer,Developer,Creator"
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
+              className="w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
             />
           </div>
         </div>
 
         {/* Mô tả */}
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0">
           <label className="text-xs font-semibold text-neutral-300">
             Mô tả ngắn (Description)
           </label>
@@ -168,14 +170,14 @@ export default function HeroTab() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Nhập giới thiệu ngắn gọn..."
-            className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
+            className="w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-neutral-600"
           />
         </div>
 
         {/* Ảnh nền Dark/Light Mode */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-neutral-800">
           {/* Dark Background */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <label className="text-xs font-semibold text-neutral-300">
               Ảnh nền chế độ Tối
             </label>
@@ -197,7 +199,7 @@ export default function HeroTab() {
               value={darkBgUrl}
               onChange={(e) => setDarkBgUrl(e.target.value)}
               placeholder="Dán link ảnh hoặc tải lên..."
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs text-white mb-2"
+              className="w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs text-white mb-2"
             />
             <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg cursor-pointer transition-colors">
               <Upload size={13} /> Tải ảnh lên
@@ -211,7 +213,7 @@ export default function HeroTab() {
           </div>
 
           {/* Light Background */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <label className="text-xs font-semibold text-neutral-300">
               Ảnh nền chế độ Sáng
             </label>
@@ -233,7 +235,7 @@ export default function HeroTab() {
               value={lightBgUrl}
               onChange={(e) => setLightBgUrl(e.target.value)}
               placeholder="Dán link ảnh hoặc tải lên..."
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs text-white mb-2"
+              className="w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs text-white mb-2"
             />
             <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg cursor-pointer transition-colors">
               <Upload size={13} /> Tải ảnh lên
@@ -248,55 +250,63 @@ export default function HeroTab() {
         </div>
 
         {/* Quản lý Mạng xã hội (Socials) */}
-        <div className="pt-4 border-t border-neutral-800 space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="pt-4 border-t border-neutral-800 space-y-3 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <label className="text-xs font-semibold text-neutral-300">
               Liên kết Mạng xã hội
             </label>
             <button
               type="button"
               onClick={addSocial}
-              className="flex items-center gap-1 px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-white text-xs rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white text-xs rounded-lg transition-colors cursor-pointer shrink-0"
             >
               <Plus size={13} /> Thêm mạng xã hội
             </button>
           </div>
 
-          {socials.map((social, index) => (
-            <div key={index} className="flex items-center gap-3">
-              <select
-                value={social.platform}
-                onChange={(e) =>
-                  updateSocial(index, "platform", e.target.value)
-                }
-                className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+          <div className="space-y-2.5">
+            {socials.map((social, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-1 sm:grid-cols-[135px_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3 bg-neutral-950/50 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none border border-neutral-800/70 sm:border-0"
               >
-                <option value="GitHub">GitHub</option>
-                <option value="LinkedIn">LinkedIn</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Instagram">Instagram</option>
-                <option value="TikTok">TikTok</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Twitter">Twitter / X</option>
-              </select>
+                <select
+                  value={social.platform}
+                  onChange={(e) =>
+                    updateSocial(index, "platform", e.target.value)
+                  }
+                  className="w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                >
+                  <option value="GitHub">GitHub</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="YouTube">YouTube</option>
+                  <option value="Twitter">Twitter / X</option>
+                </select>
 
-              <input
-                type="text"
-                value={social.url}
-                onChange={(e) => updateSocial(index, "url", e.target.value)}
-                placeholder="Nhập đường dẫn URL..."
-                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none"
-              />
+                <div className="flex items-center gap-2 min-w-0 sm:contents">
+                  <input
+                    type="text"
+                    value={social.url}
+                    onChange={(e) => updateSocial(index, "url", e.target.value)}
+                    placeholder="Nhập đường dẫn URL..."
+                    className="flex-1 sm:flex-none w-full min-w-0 bg-neutral-900 border border-neutral-800 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none"
+                  />
 
-              <button
-                type="button"
-                onClick={() => removeSocial(index)}
-                className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+                  <button
+                    type="button"
+                    onClick={() => removeSocial(index)}
+                    className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                    aria-label="Xóa liên kết mạng xã hội"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Nút lưu */}
@@ -304,7 +314,7 @@ export default function HeroTab() {
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto justify-center flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50"
           >
             <Save size={15} /> {loading ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
