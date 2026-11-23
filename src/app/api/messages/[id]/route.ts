@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../../lib/db"; // Điều chỉnh lại đường dẫn tương đối tùy vị trí file
+import { requireAdmin } from "../../../../lib/admin-auth";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const resolvedParams = await params;
     const id = Number(resolvedParams.id);

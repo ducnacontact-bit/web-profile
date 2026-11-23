@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "../../../lib/db";
+import { requireAdmin } from "../../../lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { greeting, roles, description, socials, darkBgUrl, lightBgUrl } =

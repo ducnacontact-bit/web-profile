@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../../lib/db";
+import { requireAdmin } from "../../../../lib/admin-auth";
 
 // PUT: Cập nhật Testimonial theo ID
 export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> | { id: string } },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const params = await context.params;
     const id = Number(params.id);
@@ -54,6 +58,9 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> | { id: string } },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const params = await context.params;
     const id = Number(params.id);

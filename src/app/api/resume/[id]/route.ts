@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../../lib/db";
+import { requireAdmin } from "../../../../lib/admin-auth";
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     // Phải await params trước khi lấy id trên Next.js 15+
     const resolvedParams = await params;
@@ -30,11 +34,15 @@ export async function DELETE(
     );
   }
 }
+
 // PUT: Cập nhật mục Resume theo ID
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id);

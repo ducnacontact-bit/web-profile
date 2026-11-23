@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { db } from "../../../../lib/db"; // Điều chỉnh lại đường dẫn relative cho khớp với thư mục của bạn[cite: 12]
+import { db } from "../../../../lib/db"; // Điều chỉnh lại đường dẫn relative cho khớp với thư mục của bạn
+import { requireAdmin } from "../../../../lib/admin-auth";
 
 // 1. API Cập nhật dự án (PUT)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id);
@@ -43,6 +47,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const resolvedParams = await params;
     const id = parseInt(resolvedParams.id);

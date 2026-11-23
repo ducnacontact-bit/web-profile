@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
-import { db } from "../../../../lib/db"; // Hoặc "@/lib/db" tùy theo vị trí file của bạn
+import { db } from "../../../../lib/db";
+import { requireAdmin } from "../../../../lib/admin-auth";
 
 // PUT: Cập nhật danh mục theo ID
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> | { id: string } },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
-    const id = Number(params.id);
+    const resolvedParams = await params;
+    const id = Number(resolvedParams.id);
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "ID không hợp lệ" }, { status: 400 });
+    }
+
     const body = await request.json();
     const { name } = body;
 
@@ -32,10 +41,14 @@ export async function PUT(
     );
   }
 }
+
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> | { id: string } },
 ) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const params = await context.params;
     // Chuyển id sang kiểu số (Number) vì database dùng Int (phù hợp với hàm PUT)

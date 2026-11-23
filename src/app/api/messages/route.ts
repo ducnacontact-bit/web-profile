@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../lib/db"; // Điều chỉnh lại đường dẫn tương đối tùy vị trí file của bạn
+import { requireAdmin } from "../../../lib/admin-auth";
 
 // GET: Lấy danh sách tất cả tin nhắn từ Database để hiển thị cho Admin
 export async function GET() {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const messages = await db.message.findMany({
       orderBy: { createdAt: "desc" },

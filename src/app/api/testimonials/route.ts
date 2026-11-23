@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../lib/db"; // Hoặc "@/lib/db" tùy theo vị trí file của bạn
+import { requireAdmin } from "../../../lib/admin-auth";
 
 export async function GET() {
   try {
@@ -16,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { name, role, image, content } = body;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../lib/db";
+import { requireAdmin } from "../../../lib/admin-auth";
 
 export async function GET() {
   try {
@@ -26,6 +27,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { image, paragraph1, paragraph2, hireMeUrl, cvUrl } = body;
@@ -44,9 +48,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(about);
   } catch (error) {
-    console.error("LỖI CHI TIẾT TRONG API ABOUT:", error); // <-- In lỗi thật ra terminal
+    console.error("LỖI CHI TIẾT TRONG API ABOUT:", error);
     return NextResponse.json(
-      { error: "Không thể cập nhật About", details: String(error) }, // Trả về chi tiết để xem trên trình duyệt luôn
+      { error: "Không thể cập nhật About", details: String(error) },
       { status: 500 },
     );
   }

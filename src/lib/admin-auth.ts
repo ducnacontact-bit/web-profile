@@ -1,5 +1,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { db } from "./db";
 
 export const ADMIN_COOKIE_NAME = "admin_session";
 
@@ -73,4 +75,40 @@ export async function getAuthenticatedAdminEmail(): Promise<string | null> {
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   const verified = verifySessionToken(token);
   return verified?.email || null;
+}
+
+export async function requireAdmin(): Promise<NextResponse | null> {
+  const email = await getAuthenticatedAdminEmail();
+  if (!email) {
+    return NextResponse.json(
+      { error: "Bạn chưa đăng nhập phiên quản trị." },
+      { status: 401 },
+    );
+  }
+
+  const dbUser = await db.adminUser.findUnique({
+    where: { email },
+    select: { id: true, email: true, isActive: true },
+  });
+
+  if (dbUser) {
+    if (!dbUser.isActive) {
+      return NextResponse.json(
+        { error: "Tài khoản admin đã bị vô hiệu hóa." },
+        { status: 403 },
+      );
+    }
+    return null;
+  }
+
+  const totalUsers = await db.adminUser.count();
+  const envEmail = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  if (totalUsers === 0 && envEmail && email === envEmail) {
+    return null;
+  }
+
+  return NextResponse.json(
+    { error: "Phiên đăng nhập không hợp lệ." },
+    { status: 401 },
+  );
 }

@@ -3,13 +3,14 @@ import { db } from "../../../lib/db";
 import {
   getAuthenticatedAdminEmail,
   hashPassword,
+  requireAdmin,
 } from "../../../lib/admin-auth";
 
 export async function GET() {
-  const currentEmail = await getAuthenticatedAdminEmail();
-  if (!currentEmail) {
-    return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
-  }
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
+  const currentEmail = (await getAuthenticatedAdminEmail())!;
 
   const users = await db.adminUser.findMany({
     orderBy: { createdAt: "desc" },
@@ -28,10 +29,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const currentEmail = await getAuthenticatedAdminEmail();
-  if (!currentEmail) {
-    return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
-  }
+  const authError = await requireAdmin();
+  if (authError) return authError;
 
   try {
     const { email, name, password, isActive = true } = await req.json();
@@ -82,10 +81,10 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const currentEmail = await getAuthenticatedAdminEmail();
-  if (!currentEmail) {
-    return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
-  }
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
+  const currentEmail = (await getAuthenticatedAdminEmail())!;
 
   try {
     const { id, isActive, name, password } = await req.json();
@@ -169,10 +168,10 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const currentEmail = await getAuthenticatedAdminEmail();
-  if (!currentEmail) {
-    return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
-  }
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
+  const currentEmail = (await getAuthenticatedAdminEmail())!;
 
   try {
     const userId = Number(new URL(req.url).searchParams.get("id"));
