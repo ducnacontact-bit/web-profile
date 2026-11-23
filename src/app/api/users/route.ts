@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { db } from "../../../../lib/db";
+import { db } from "../../../lib/db";
 import {
   getAuthenticatedAdminEmail,
   hashPassword,
-} from "../../../../lib/admin-auth";
+} from "../../../lib/admin-auth";
 
 export async function GET() {
   const currentEmail = await getAuthenticatedAdminEmail();
