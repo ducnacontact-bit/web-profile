@@ -7,8 +7,7 @@ const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const PUBLIC_WRITE_PATHS = new Set([
   "/api/auth/login",
   "/api/auth/logout",
-  // Nếu form liên hệ ngoài trang chủ gửi POST tới /api/messages thì bỏ comment dòng dưới:
-  // "/api/messages",
+  "/api/messages",
 ]);
 
 function getSecret(): string {
