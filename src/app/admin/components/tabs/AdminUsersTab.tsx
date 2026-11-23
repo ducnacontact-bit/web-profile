@@ -20,6 +20,8 @@ interface AdminAccountItem {
   lastLoginAt: string | null;
 }
 
+const API_ENDPOINT = "/api/users";
+
 export default function AdminUsersTab() {
   const [users, setUsers] = useState<AdminAccountItem[]>([]);
   const [currentEmail, setCurrentEmail] = useState("");
@@ -42,16 +44,35 @@ export default function AdminUsersTab() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users", { cache: "no-store" });
-      const data = await res.json();
+      const res = await fetch(API_ENDPOINT, { cache: "no-store" });
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setNotice({
+          type: "error",
+          text: `API ${API_ENDPOINT} trả về dữ liệu không hợp lệ (HTTP ${res.status}).`,
+        });
+        return;
+      }
+
       if (res.ok) {
         setUsers(Array.isArray(data.users) ? data.users : []);
         setCurrentEmail(data.currentEmail || "");
       } else {
-        setNotice({ type: "error", text: data.error || "Lỗi tải tài khoản." });
+        setNotice({
+          type: "error",
+          text: data.error || `Lỗi tải tài khoản (HTTP ${res.status}).`,
+        });
       }
-    } catch {
-      setNotice({ type: "error", text: "Lỗi kết nối máy chủ." });
+    } catch (err) {
+      setNotice({
+        type: "error",
+        text: `Không kết nối được tới ${API_ENDPOINT}: ${
+          err instanceof Error ? err.message : "Network error"
+        }`,
+      });
     } finally {
       setLoading(false);
     }
@@ -66,16 +87,31 @@ export default function AdminUsersTab() {
     setNotice(null);
     setCreating(true);
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch(API_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, password, isActive }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setNotice({ type: "error", text: data.error || "Tạo thất bại." });
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setNotice({
+          type: "error",
+          text: `Server trả về lỗi không phải JSON (HTTP ${res.status}). Kiểm tra lại bảng AdminUser trên Supabase.`,
+        });
         return;
       }
+
+      if (!res.ok) {
+        setNotice({
+          type: "error",
+          text: data.error || `Tạo tài khoản thất bại (HTTP ${res.status}).`,
+        });
+        return;
+      }
+
       setEmail("");
       setName("");
       setPassword("");
@@ -85,8 +121,13 @@ export default function AdminUsersTab() {
         text: `Đã lưu tài khoản ${data.user.email} vào database.`,
       });
       await loadUsers();
-    } catch {
-      setNotice({ type: "error", text: "Lỗi kết nối máy chủ." });
+    } catch (err) {
+      setNotice({
+        type: "error",
+        text: `Lỗi kết nối máy chủ: ${
+          err instanceof Error ? err.message : "Network error"
+        }`,
+      });
     } finally {
       setCreating(false);
     }
@@ -95,7 +136,7 @@ export default function AdminUsersTab() {
   const handleToggleActive = async (user: AdminAccountItem) => {
     setNotice(null);
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch(API_ENDPOINT, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: user.id, isActive: !user.isActive }),
@@ -122,7 +163,7 @@ export default function AdminUsersTab() {
       return;
     }
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch(API_ENDPOINT, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, password: newPassword }),
@@ -150,7 +191,7 @@ export default function AdminUsersTab() {
     setNotice(null);
     if (!confirm(`Xóa tài khoản ${user.email}?`)) return;
     try {
-      const res = await fetch(`/api/admin/users?id=${user.id}`, {
+      const res = await fetch(`${API_ENDPOINT}?id=${user.id}`, {
         method: "DELETE",
       });
       const data = await res.json();
