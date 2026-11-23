@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminSidebar from "@/app/admin/components/AdminSidebar";
 import AdminHeader from "@/app/admin/components/AdminHeader";
+import AdminLoginForm from "@/app/admin/components/AdminLoginForm";
 
-// Import các Tabs
 import OverviewTab from "@/app/admin/components/tabs/OverviewTab";
 import HeroTab from "@/app/admin/components/tabs/HeroTab";
 import AboutTab from "@/app/admin/components/tabs/AboutTab";
@@ -18,20 +18,23 @@ import ContactTab from "@/app/admin/components/tabs/ContactTab";
 import NavbarTab from "@/app/admin/components/tabs/NavbarTab";
 import MessagesTab from "@/app/admin/components/tabs/MessagesTab";
 import LogoTab from "@/app/admin/components/tabs/LogoTab";
+import AdminUsersTab from "@/app/admin/components/tabs/AdminUsersTab";
 
 export default function AdminDashboardPage() {
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+
   const [activeTab, setActiveTab] = useState("overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Mock States dữ liệu (Bạn có thể thay thế bằng fetch API từ Backend / Database thực tế)
   const [blogs, setBlogs] = useState([
     {
       id: 1,
       title: "Xây dựng ứng dụng Web với Next.js và Tailwind CSS",
       slug: "nextjs-tailwind-css",
       image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c",
-      excerpt:
-        "Hướng dẫn chi tiết cách khởi tạo dự án chuẩn với Shadcn UI và Next.js.",
+      excerpt: "Hướng dẫn chi tiết cách khởi tạo dự án chuẩn với Next.js.",
       content: "Nội dung bài viết chi tiết...",
       createdAt: "2026-06-01",
     },
@@ -124,11 +127,32 @@ export default function AdminDashboardPage() {
   });
 
   const [logoData, setLogoData] = useState({
-    logoText: "Shadcn Portfolio",
+    logoText: "ducngx.online",
     logoImageUrl: "",
   });
 
-  // Hàm xóa dữ liệu mẫu
+  useEffect(() => {
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated) {
+          setAuthenticated(true);
+          setAdminEmail(data?.user?.email || "");
+        }
+      })
+      .catch(() => setAuthenticated(false))
+      .finally(() => setCheckingSession(false));
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      setAuthenticated(false);
+      setAdminEmail("");
+    }
+  };
+
   const handleDeleteBlog = (id: number) =>
     setBlogs(blogs.filter((b) => b.id !== id));
   const handleDeleteProject = (id: number) =>
@@ -146,20 +170,42 @@ export default function AdminDashboardPage() {
   const handleDeleteMessage = (id: number) =>
     setMessages(messages.filter((m) => m.id !== id));
 
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-neutral-400 flex items-center justify-center text-xs">
+        Đang kiểm tra phiên đăng nhập...
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <AdminLoginForm
+        onSuccess={(email) => {
+          setAuthenticated(true);
+          setAdminEmail(email);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#09090b] text-neutral-100 flex overflow-x-hidden">
-      {/* Sidebar điều hướng */}
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         messageCount={messages.length}
+        adminEmail={adminEmail}
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
-      {/* Khu vực nội dung chính bên phải */}
       <div className="flex-1 flex flex-col min-w-0">
-        <AdminHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+        <AdminHeader
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
+          adminEmail={adminEmail}
+          onLogout={handleLogout}
+        />
 
         <main className="flex-1 p-3.5 sm:p-6 md:p-8 overflow-y-auto overflow-x-hidden">
           {activeTab === "overview" && (
@@ -169,21 +215,18 @@ export default function AdminDashboardPage() {
               messagesCount={messages.length}
             />
           )}
-
           {activeTab === "hero" && (
             <HeroTab
               initialData={heroData}
               onSave={(data) => setHeroData(data)}
             />
           )}
-
           {activeTab === "about" && (
             <AboutTab
               initialData={aboutData}
               onSave={(data) => setAboutData(data)}
             />
           )}
-
           {activeTab === "resume" && (
             <ResumeTab
               resumes={resumes}
@@ -191,7 +234,6 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteResume}
             />
           )}
-
           {activeTab === "services" && (
             <ServicesTab
               services={services}
@@ -199,7 +241,6 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteService}
             />
           )}
-
           {activeTab === "testimonials" && (
             <TestimonialsTab
               testimonials={testimonials}
@@ -207,7 +248,6 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteTestimonial}
             />
           )}
-
           {activeTab === "blogs" && (
             <BlogsTab
               blogs={blogs}
@@ -215,7 +255,6 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteBlog}
             />
           )}
-
           {activeTab === "categories" && (
             <CategoriesTab
               categories={categories}
@@ -224,7 +263,6 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteCategory}
             />
           )}
-
           {activeTab === "projects" && (
             <ProjectsTab
               projects={projects}
@@ -232,14 +270,12 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteProject}
             />
           )}
-
           {activeTab === "contact" && (
             <ContactTab
               initialData={contactData}
               onSave={(data) => setContactData(data)}
             />
           )}
-
           {activeTab === "navbar" && (
             <NavbarTab
               navItems={navItems}
@@ -247,17 +283,16 @@ export default function AdminDashboardPage() {
               onDelete={handleDeleteNav}
             />
           )}
-
           {activeTab === "messages" && (
             <MessagesTab messages={messages} onDelete={handleDeleteMessage} />
           )}
-
           {activeTab === "logo" && (
             <LogoTab
               initialData={logoData}
               onSave={(data) => setLogoData(data)}
             />
           )}
+          {activeTab === "admin-users" && <AdminUsersTab />}
         </main>
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
   Menu,
   Mail,
   Image as ImageIcon,
+  Shield,
   X,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   messageCount: number;
+  adminEmail?: string;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -29,6 +31,7 @@ export default function AdminSidebar({
   activeTab,
   setActiveTab,
   messageCount,
+  adminEmail,
   mobileOpen = false,
   onCloseMobile,
 }: AdminSidebarProps) {
@@ -53,6 +56,7 @@ export default function AdminSidebar({
   const systemItemsList = [
     { id: "messages", label: "Tin nhắn", icon: Mail, badge: messageCount },
     { id: "logo", label: "Cấu hình Logo", icon: ImageIcon },
+    { id: "admin-users", label: "Kiểm soát Tài khoản", icon: Shield },
   ];
 
   const handleSelectTab = (tabId: string) => {
@@ -66,10 +70,10 @@ export default function AdminSidebar({
         <div className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-neutral-800/80 gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-neutral-200 to-neutral-500 flex items-center justify-center text-black font-bold text-xs shrink-0">
-              S
+              D
             </div>
             <span className="font-semibold text-sm tracking-wide text-white truncate">
-              Shadcn UI Portfolio
+              ducngx.online Admin
             </span>
           </div>
 
@@ -77,7 +81,7 @@ export default function AdminSidebar({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="md:hidden p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
+              className="md:hidden p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 cursor-pointer"
               aria-label="Đóng menu"
             >
               <X size={18} />
@@ -99,7 +103,7 @@ export default function AdminSidebar({
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all text-left ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer text-left ${
                       isActive
                         ? "bg-neutral-800 text-white font-semibold"
                         : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
@@ -126,7 +130,7 @@ export default function AdminSidebar({
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all text-left ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer text-left ${
                       isActive
                         ? "bg-neutral-800 text-white font-semibold"
                         : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
@@ -159,7 +163,7 @@ export default function AdminSidebar({
               Administrator
             </p>
             <p className="text-[10px] text-neutral-500 truncate">
-              admin@portfolio.com
+              {adminEmail || "admin@ducngx.online"}
             </p>
           </div>
         </div>
@@ -170,7 +174,6 @@ export default function AdminSidebar({
   return (
     <>
       <div className="hidden md:flex md:shrink-0">{sidebarContent}</div>
-
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div
