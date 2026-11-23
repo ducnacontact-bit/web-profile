@@ -21,6 +21,7 @@ import LogoTab from "@/app/admin/components/tabs/LogoTab";
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Mock States dữ liệu (Bạn có thể thay thế bằng fetch API từ Backend / Database thực tế)
   const [blogs, setBlogs] = useState([
@@ -146,19 +147,21 @@ export default function AdminDashboardPage() {
     setMessages(messages.filter((m) => m.id !== id));
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-neutral-100 flex">
+    <div className="min-h-screen bg-[#09090b] text-neutral-100 flex overflow-x-hidden">
       {/* Sidebar điều hướng */}
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         messageCount={messages.length}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
       {/* Khu vực nội dung chính bên phải */}
       <div className="flex-1 flex flex-col min-w-0">
-        <AdminHeader />
+        <AdminHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+        <main className="flex-1 p-3.5 sm:p-6 md:p-8 overflow-y-auto overflow-x-hidden">
           {activeTab === "overview" && (
             <OverviewTab
               projectsCount={projects.length}

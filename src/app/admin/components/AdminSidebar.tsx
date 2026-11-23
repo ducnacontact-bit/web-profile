@@ -1,3 +1,5 @@
+"use client";
+
 import {
   LayoutDashboard,
   Sparkles,
@@ -12,18 +14,23 @@ import {
   Menu,
   Mail,
   Image as ImageIcon,
+  X,
 } from "lucide-react";
 
 interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   messageCount: number;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export default function AdminSidebar({
   activeTab,
   setActiveTab,
   messageCount,
+  mobileOpen = false,
+  onCloseMobile,
 }: AdminSidebarProps) {
   const navItemsList = [
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
@@ -48,19 +55,37 @@ export default function AdminSidebar({
     { id: "logo", label: "Cấu hình Logo", icon: ImageIcon },
   ];
 
-  return (
-    <aside className="w-64 border-r border-neutral-800/80 bg-[#09090b] md:flex flex-col justify-between hidden select-none">
+  const handleSelectTab = (tabId: string) => {
+    setActiveTab(tabId);
+    onCloseMobile?.();
+  };
+
+  const sidebarContent = (
+    <aside className="w-72 max-w-[85vw] md:w-64 md:max-w-none shrink-0 border-r border-neutral-800/80 bg-[#09090b] flex flex-col justify-between select-none h-full overflow-y-auto">
       <div>
-        <div className="h-16 flex items-center px-6 border-b border-neutral-800/80 gap-3">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-neutral-200 to-neutral-500 flex items-center justify-center text-black font-bold text-xs">
-            S
+        <div className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-neutral-800/80 gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-neutral-200 to-neutral-500 flex items-center justify-center text-black font-bold text-xs shrink-0">
+              S
+            </div>
+            <span className="font-semibold text-sm tracking-wide text-white truncate">
+              Shadcn UI Portfolio
+            </span>
           </div>
-          <span className="font-semibold text-sm tracking-wide text-white">
-            Shadcn UI Portfolio
-          </span>
+
+          {onCloseMobile && (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="md:hidden p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
+              aria-label="Đóng menu"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
-        <div className="px-4 py-6 space-y-6">
+        <div className="px-3 sm:px-4 py-5 sm:py-6 space-y-6">
           <div>
             <p className="px-3 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase mb-2">
               Dashboards
@@ -72,14 +97,16 @@ export default function AdminSidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all ${
+                    type="button"
+                    onClick={() => handleSelectTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all text-left ${
                       isActive
                         ? "bg-neutral-800 text-white font-semibold"
                         : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
                     }`}
                   >
-                    <Icon size={16} /> {item.label}
+                    <Icon size={16} className="shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </button>
                 );
               })}
@@ -97,18 +124,20 @@ export default function AdminSidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all ${
+                    type="button"
+                    onClick={() => handleSelectTab(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all text-left ${
                       isActive
                         ? "bg-neutral-800 text-white font-semibold"
                         : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon size={16} /> {item.label}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Icon size={16} className="shrink-0" />
+                      <span className="truncate">{item.label}</span>
                     </div>
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="bg-amber-500 text-black font-bold text-[10px] px-1.5 py-0.5 rounded-full">
+                      <span className="bg-amber-500 text-black font-bold text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ml-2">
                         {item.badge}
                       </span>
                     )}
@@ -120,9 +149,9 @@ export default function AdminSidebar({
         </div>
       </div>
 
-      <div className="p-4 border-t border-neutral-800/80">
+      <div className="p-4 border-t border-neutral-800/80 shrink-0">
         <div className="bg-neutral-900/60 p-3 rounded-xl border border-neutral-800/50 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center font-bold text-xs text-white">
+          <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center font-bold text-xs text-white shrink-0">
             AD
           </div>
           <div className="overflow-hidden">
@@ -136,5 +165,21 @@ export default function AdminSidebar({
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      <div className="hidden md:flex md:shrink-0">{sidebarContent}</div>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+            onClick={onCloseMobile}
+          />
+          <div className="relative z-10 h-full">{sidebarContent}</div>
+        </div>
+      )}
+    </>
   );
 }
